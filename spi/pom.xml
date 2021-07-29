@@ -23,7 +23,7 @@
    <parent>
        <groupId>org.glassfish.exousia</groupId>
        <artifactId>parent</artifactId>
-       <version>1.0.0-M3</version>
+       <version>1.0.1-SNAPSHOT</version>
     </parent>
 
    <artifactId>spi</artifactId>
