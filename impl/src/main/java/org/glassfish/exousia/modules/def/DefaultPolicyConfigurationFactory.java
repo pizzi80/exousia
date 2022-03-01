@@ -28,58 +28,41 @@ import jakarta.security.jacc.PolicyContextException;
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfigurationFactory
-    extends PolicyConfigurationFactory {
+public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactory {
 
-    private static final
-    ConcurrentMap<String, DefaultPolicyConfigurationStateMachine>
-        configurators = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String,DefaultPolicyConfigurationStateMachine> configurators = new ConcurrentHashMap<>();
 
     @Override
-    public PolicyConfiguration getPolicyConfiguration(
-        String contextID,
-        boolean remove)
-        throws PolicyContextException {
+    public PolicyConfiguration getPolicyConfiguration( String contextID , boolean remove ) throws PolicyContextException {
 
-        DefaultPolicyConfigurationStateMachine
-            defaultPolicyConfigurationStateMachine =
-            configurators.computeIfAbsent(contextID,
-                contextId -> new DefaultPolicyConfigurationStateMachine(
-                    new DefaultPolicyConfiguration(
-                        contextID)));
+        // if contextID is null ??
+        if ( contextID == null ) return null;
 
-        if (remove) {
-            defaultPolicyConfigurationStateMachine
-                .delete();
-        }
+        DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine =
+            configurators.computeIfAbsent(
+                    contextID,
+                    contextId -> new DefaultPolicyConfigurationStateMachine(new DefaultPolicyConfiguration(contextID))
+            );
 
-        defaultPolicyConfigurationStateMachine
-            .open();
+        // Remove Policy
+        if (remove) defaultPolicyConfigurationStateMachine.delete();
 
-        return
-            defaultPolicyConfigurationStateMachine;
+        // Open and return
+        defaultPolicyConfigurationStateMachine.open();
+        return defaultPolicyConfigurationStateMachine;
     }
 
     @Override
-    public boolean inService(
-        String contextID)
-        throws PolicyContextException {
-        DefaultPolicyConfigurationStateMachine
-            defaultPolicyConfigurationStateMachine =
-            configurators.get(contextID);
+    public boolean inService(String contextID) throws PolicyContextException {
+        DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.get(contextID);
 
-        if (defaultPolicyConfigurationStateMachine == null) {
-            return false;
-        }
+        if (defaultPolicyConfigurationStateMachine == null) return false;
 
-        return defaultPolicyConfigurationStateMachine
-            .inService();
+        return defaultPolicyConfigurationStateMachine.inService();
     }
 
     public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
-        return (DefaultPolicyConfiguration) configurators
-            .get(getContextID())
-            .getPolicyConfiguration();
+        return (DefaultPolicyConfiguration) configurators.get(getContextID()).getPolicyConfiguration();
     }
 
 }

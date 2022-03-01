@@ -41,7 +41,7 @@
     <licenses>
         <license>
             <name>EPL 2.0</name>
-            <url>http://www.eclipse.org/legal/epl-2.0</url>
+            <url>https://www.eclipse.org/legal/epl-2.0</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -149,7 +149,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0-M3</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
@@ -219,7 +219,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.2.2</version>
                 <configuration>
                     <archive>
                         <manifestFile>
@@ -269,7 +269,7 @@
                             <bottom><![CDATA[
 Comments to: <a href="mailto:wasp-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
 Copyright &#169; 2021 Eclipse Foundation. All rights reserved.<br>
-Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
+Use is subject to <a href="https://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
                             </bottom>
                             <links>
                                 <link>https://jakarta.ee/specifications/platform/9/apidocs/</link>

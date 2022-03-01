@@ -15,13 +15,10 @@
  */
 package org.glassfish.exousia.constraints;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.unmodifiableSet;
-
-import java.util.HashSet;
-import java.util.List;
+import java.util.Collection;
 import java.util.Set;
+
+import static java.util.Collections.unmodifiableSet;
 
 public class WebResourceCollection {
 
@@ -30,23 +27,23 @@ public class WebResourceCollection {
     private final Set<String> httpMethodOmissions;
 
     public WebResourceCollection(String... urlPatterns) {
-        this(asList(urlPatterns));
+        this(Set.of(urlPatterns));
     }
 
-    public WebResourceCollection(List<String> urlPatterns) {
-        this(new HashSet<>(urlPatterns), emptySet(), emptySet());
+    public WebResourceCollection(Collection<String> urlPatterns) {
+        this( Set.copyOf(urlPatterns) , Set.of(), Set.of());
     }
 
     public WebResourceCollection(Set<String> urlPatterns, Set<String> httpMethods) {
-        this(urlPatterns, httpMethods, emptySet());
+        this(urlPatterns, httpMethods, Set.of());
     }
 
     public WebResourceCollection(String[] urlPatterns, String[] httpMethods, String[] httpMethodOmissions) {
-        this(asList(urlPatterns), asList(httpMethods), asList(httpMethodOmissions));
+        this( Set.of(urlPatterns) , Set.of(httpMethods) , Set.of(httpMethodOmissions) );
     }
 
-    public WebResourceCollection(List<String> urlPatterns, List<String> httpMethods, List<String> httpMethodOmissions) {
-        this(new HashSet<>(urlPatterns), new HashSet<>(httpMethods), new HashSet<>(httpMethodOmissions));
+    private WebResourceCollection(Collection<String> urlPatterns, Collection<String> httpMethods, Collection<String> httpMethodOmissions) {
+        this(Set.copyOf(urlPatterns), Set.copyOf(httpMethods), Set.copyOf(httpMethodOmissions) );
     }
 
     public WebResourceCollection(Set<String> urlPatterns, Set<String> httpMethods, Set<String> httpMethodOmissions) {
@@ -55,17 +52,16 @@ public class WebResourceCollection {
         this.httpMethodOmissions = unmodifiableSet(httpMethodOmissions);
     }
 
+    // --- GETTERS -----------------------------------------------------------------------------
+
     public Set<String> getUrlPatterns() {
         return urlPatterns;
     }
-
     public Set<String> getHttpMethods() {
         return httpMethods;
     }
-
     public Set<String> getHttpMethodOmissions() {
         return httpMethodOmissions;
     }
-
 
 }

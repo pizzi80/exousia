@@ -69,7 +69,7 @@ public class AuthorizationService {
 
     static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
 
-    private static boolean isSecMgrOff = System.getSecurityManager() == null;
+    private static boolean isSecMgrOff = true;  //System.getSecurityManager() == null; // removed in java 17+
 
     public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
     public static final String SUBJECT = "javax.security.auth.Subject.container";
@@ -96,9 +96,7 @@ public class AuthorizationService {
 
     private String constrainedUriRequestAttribute;
 
-    public AuthorizationService(
-            ServletContext servletContext,
-            Supplier<Subject> subjectSupplier) {
+    public AuthorizationService( ServletContext servletContext, Supplier<Subject> subjectSupplier) {
         this(
             DefaultPolicyConfigurationFactory.class,
             DefaultPolicy.class,
@@ -129,14 +127,9 @@ public class AuthorizationService {
             subjectSupplier, principalMapper);
     }
 
-    public AuthorizationService(
-        String contextId,
-        Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
-
-    this(
-        getFactory(), getPolicy(), contextId,
-        subjectSupplier, principalMapper);
-}
+    public AuthorizationService(String contextId, Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
+        this(getFactory(), getPolicy(), contextId, subjectSupplier, principalMapper);
+    }
 
     public AuthorizationService(
         PolicyConfigurationFactory factory, Policy policy, String contextId,
@@ -152,15 +145,9 @@ public class AuthorizationService {
             // authorization config
             PolicyContext.setContextID(contextId);
 
-            PolicyContext.registerHandler(
-                SUBJECT,
-                new DefaultPolicyContextHandler(SUBJECT, subjectSupplier),
-                true);
+            PolicyContext.registerHandler(SUBJECT, new DefaultPolicyContextHandler(SUBJECT, subjectSupplier), true);
 
-            PolicyContext.registerHandler(
-                PRINCIPAL_MAPPER,
-                new DefaultPolicyContextHandler(PRINCIPAL_MAPPER, () -> principalMapper),
-                true);
+            PolicyContext.registerHandler(PRINCIPAL_MAPPER, new DefaultPolicyContextHandler(PRINCIPAL_MAPPER, () -> principalMapper), true);
 
         } catch (PolicyContextException | IllegalArgumentException | SecurityException e) {
             throw new IllegalStateException(e);

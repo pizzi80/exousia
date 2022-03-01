@@ -38,17 +38,17 @@ public class DefaultPolicyContextHandler implements PolicyContextHandler {
     }
 
     @Override
-    public Object getContext(String key, Object data) throws PolicyContextException {
+    public Object getContext(String key, Object data) {
         return contextObjectSupplier.get();
     }
 
     @Override
-    public boolean supports(String key) throws PolicyContextException {
+    public boolean supports(String key) {
         return this.key.equals(key);
     }
 
     @Override
-    public String[] getKeys() throws PolicyContextException {
+    public String[] getKeys() {
         return keys;
     }
     

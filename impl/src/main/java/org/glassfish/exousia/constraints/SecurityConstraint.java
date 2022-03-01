@@ -15,18 +15,17 @@
  */
 package org.glassfish.exousia.constraints;
 
-import static java.util.Arrays.asList;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
+import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
-import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
 public class SecurityConstraint {
 
@@ -39,15 +38,15 @@ public class SecurityConstraint {
     }
 
     public SecurityConstraint(WebResourceCollection webResourceCollection, String... rolesAllowed) {
-        this(asList(webResourceCollection), asList(rolesAllowed));
+        this(List.of(webResourceCollection), List.of(rolesAllowed));
     }
 
     public SecurityConstraint(List<WebResourceCollection> webResourceCollections, String... rolesAllowed) {
-        this(webResourceCollections, asList(rolesAllowed));
+        this(webResourceCollections, List.of(rolesAllowed));
     }
 
-    public SecurityConstraint(List<WebResourceCollection> webResourceCollections, List<String> rolesAllowed) {
-        this(webResourceCollections, new HashSet<>(rolesAllowed));
+    public SecurityConstraint(List<WebResourceCollection> webResourceCollections, Collection<String> rolesAllowed) {
+        this(webResourceCollections, Set.copyOf(rolesAllowed));
     }
 
     public SecurityConstraint(List<WebResourceCollection> webResourceCollections, Set<String> rolesAllowed) {

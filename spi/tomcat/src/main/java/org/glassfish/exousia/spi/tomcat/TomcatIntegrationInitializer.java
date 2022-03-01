@@ -31,14 +31,14 @@ import jakarta.servlet.ServletException;
 public class TomcatIntegrationInitializer implements ServletContainerInitializer {
 
     @Override
-    public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+    public void onStartup(Set<Class<?>> classes, ServletContext context) {
         if (isTomcat()) {
-            ctx.addFilter(TomcatAuthorizationFilter.class.getCanonicalName(), TomcatAuthorizationFilter.class);
-            ctx.addListener(TomcatAuthorizationFilter.class);
+            context.addFilter(TomcatAuthorizationFilter.class.getCanonicalName(),TomcatAuthorizationFilter.class);
+            context.addListener(TomcatAuthorizationFilter.class);
         }
     }
 
-    private boolean isTomcat() {
+    private static boolean isTomcat() {
         try {
             Class.forName("org.apache.tomcat.util.descriptor.web.SecurityConstraint");
             return true;
