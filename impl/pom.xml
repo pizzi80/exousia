@@ -113,13 +113,13 @@
       
         
         <!-- Tests -->
-        
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.1</version>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
 
     <build>
@@ -257,7 +257,7 @@
                             <goal>jar</goal>
                         </goals>
                         <configuration>
-                            <source>1.8</source>
+                            <source>11</source>
                             <detectJavaApiLink>false</detectJavaApiLink>
                             <additionalJOption>-Xdoclint:none</additionalJOption>
                             <groups>
