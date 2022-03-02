@@ -17,6 +17,7 @@ package org.glassfish.exousia.modules.def;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.Logger;
 
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyConfigurationFactory;
@@ -29,12 +30,12 @@ import jakarta.security.jacc.PolicyContextException;
  */
 public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactory {
 
+    private final static Logger logger = Logger.getLogger(DefaultPolicyConfigurationFactory.class.getName());
+
     private static final ConcurrentMap<String,DefaultPolicyConfigurationStateMachine> configurators = new ConcurrentHashMap<>();
 
     @Override
     public PolicyConfiguration getPolicyConfiguration( String contextID , boolean remove ) throws PolicyContextException {
-
-        if ( remove ) configurators.remove(contextID);
 
         DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine =
             configurators.computeIfAbsent(
@@ -61,7 +62,15 @@ public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactor
 
     public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
 
+        logger.info( configurators.toString() );
+
         return (DefaultPolicyConfiguration) configurators.get(PolicyContext.getContextID()).getPolicyConfiguration();
+
+//        return (DefaultPolicyConfiguration) configurators.computeIfAbsent(
+//                contextID,
+//                contextId -> new DefaultPolicyConfigurationStateMachine(new DefaultPolicyConfiguration(contextID))
+//        );
+
     }
 
 }
