@@ -26,9 +26,7 @@ import jakarta.security.jacc.PolicyContextException;
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfiguration
-    extends
-    DefaultPolicyConfigurationPermissions {
+public class DefaultPolicyConfiguration extends DefaultPolicyConfigurationPermissions {
 
     public DefaultPolicyConfiguration(
         String contextID) {
@@ -41,14 +39,9 @@ public class DefaultPolicyConfiguration
     public void commit()
         throws PolicyContextException {
 
-        roleMapper = (PrincipalMapper) PolicyContext
-            .getContext(
-                PRINCIPAL_MAPPER);
+        roleMapper = (PrincipalMapper) PolicyContext.getContext(PRINCIPAL_MAPPER);
         if (roleMapper == null) {
-            roleMapper = new DefaultRoleMapper(
-                getContextID(),
-                getPerRolePermissions()
-                    .keySet());
+            roleMapper = new DefaultRoleMapper(getContextID(), getPerRolePermissions().keySet());
         }
     }
 

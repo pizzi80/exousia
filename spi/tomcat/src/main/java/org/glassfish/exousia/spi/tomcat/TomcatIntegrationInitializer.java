@@ -19,7 +19,6 @@ import java.util.Set;
 
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
 
 /**
 * This initializer installs a container specific integration between Exousia
@@ -32,19 +31,8 @@ public class TomcatIntegrationInitializer implements ServletContainerInitializer
 
     @Override
     public void onStartup(Set<Class<?>> classes, ServletContext context) {
-        if (isTomcat()) {
-            context.addFilter(TomcatAuthorizationFilter.class.getCanonicalName(),TomcatAuthorizationFilter.class);
-            context.addListener(TomcatAuthorizationFilter.class);
-        }
-    }
-
-    private static boolean isTomcat() {
-        try {
-            Class.forName("org.apache.tomcat.util.descriptor.web.SecurityConstraint");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        context.addFilter(TomcatAuthorizationFilter.class.getCanonicalName(),TomcatAuthorizationFilter.class);
+        context.addListener(TomcatAuthorizationFilter.class);
     }
 
 }

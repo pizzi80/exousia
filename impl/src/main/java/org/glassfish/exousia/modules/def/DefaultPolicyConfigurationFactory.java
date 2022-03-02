@@ -62,6 +62,7 @@ public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactor
     }
 
     public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
+
         return (DefaultPolicyConfiguration) configurators.get(getContextID()).getPolicyConfiguration();
     }
 

@@ -23,75 +23,54 @@ import java.util.HashSet;
 import java.util.Set;
 
 import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 
 /**
  *
  * @author Arjan Tijms
  */
-public abstract class DefaultPolicyConfigurationBase
-    implements PolicyConfiguration {
+public abstract class DefaultPolicyConfigurationBase implements PolicyConfiguration {
 
     private final String contextID;
-    private final Set<String> linkedContextIds =
-        new HashSet<>();
+    private final Set<String> linkedContextIds = new HashSet<>();
 
-    public DefaultPolicyConfigurationBase(
-        String contextID) {
+    public DefaultPolicyConfigurationBase(String contextID) {
         this.contextID = contextID;
     }
 
     @Override
-    public String getContextID()
-        throws PolicyContextException {
+    public String getContextID() throws PolicyContextException {
         return contextID;
     }
 
     @Override
-    public void addToExcludedPolicy(
-        PermissionCollection permissions)
-        throws PolicyContextException {
-        for (Permission permission : list(
-            permissions.elements())) {
-            addToExcludedPolicy(
-                permission);
+    public void addToExcludedPolicy(PermissionCollection permissions) throws PolicyContextException {
+        for (Permission permission : list(permissions.elements())) {
+            addToExcludedPolicy(permission);
         }
     }
 
     @Override
-    public void addToUncheckedPolicy(
-        PermissionCollection permissions)
-        throws PolicyContextException {
-        for (Permission permission : list(
-            permissions.elements())) {
-            addToUncheckedPolicy(
-                permission);
+    public void addToUncheckedPolicy(PermissionCollection permissions) throws PolicyContextException {
+        for (Permission permission : list(permissions.elements()))
+            addToUncheckedPolicy(permission);
+    }
+
+    @Override
+    public void addToRole(String roleName, PermissionCollection permissions) throws PolicyContextException {
+        for (Permission permission : list(permissions.elements())) {
+            addToRole(roleName,permission);
         }
     }
 
     @Override
-    public void addToRole(
-        String roleName,
-        PermissionCollection permissions)
-        throws PolicyContextException {
-        for (Permission permission : list(
-            permissions.elements())) {
-            addToRole(roleName,
-                permission);
-        }
+    public void linkConfiguration(PolicyConfiguration link) throws PolicyContextException {
+        linkedContextIds.add(link.getContextID());
     }
 
     @Override
-    public void linkConfiguration(
-        PolicyConfiguration link)
-        throws PolicyContextException {
-        linkedContextIds
-            .add(link.getContextID());
-    }
-
-    @Override
-    public boolean inService()
-        throws PolicyContextException {
+    public boolean inService() {
         // Not used, taken care of by
         // PolicyConfigurationStateMachine
         return true;

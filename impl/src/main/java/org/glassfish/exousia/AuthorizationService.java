@@ -69,13 +69,18 @@ public class AuthorizationService {
 
     static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
 
-    private static boolean isSecMgrOff = true;  //System.getSecurityManager() == null; // removed in java 17+
+    static {
+        System.setSecurityManager(null);
+    }
+
+    private static final boolean isSecMgrOff = true;  //System.getSecurityManager() == null; // removed in java 17+
 
     public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
     public static final String SUBJECT = "javax.security.auth.Subject.container";
     public static final String FACTORY = "jakarta.security.jacc.PolicyConfigurationFactory.provider";
-    public static final String ENTERPRISE_BEAN = "jakarta.ejb.EnterpriseBean";
-    public static final String ENTERPRISE_BEAN_ARGUMENTS = "jakarta.ejb.arguments";
+
+    //public static final String ENTERPRISE_BEAN = "jakarta.ejb.EnterpriseBean";
+    //public static final String ENTERPRISE_BEAN_ARGUMENTS = "jakarta.ejb.arguments";
 
     public static final String PRINCIPAL_MAPPER = "jakarta.authorization.PrincipalMapper.provider";
 
@@ -98,33 +103,42 @@ public class AuthorizationService {
 
     public AuthorizationService( ServletContext servletContext, Supplier<Subject> subjectSupplier) {
         this(
-            DefaultPolicyConfigurationFactory.class,
-            DefaultPolicy.class,
-            getServletContextId(servletContext), subjectSupplier);
+                DefaultPolicyConfigurationFactory.class,
+                DefaultPolicy.class,
+                getServletContextId(servletContext),
+                subjectSupplier
+        );
     }
 
-    public AuthorizationService(
-            String contextId,
-            Supplier<Subject> subjectSupplier) {
+    public AuthorizationService(String contextId, Supplier<Subject> subjectSupplier) {
         this(
             DefaultPolicyConfigurationFactory.class,
             DefaultPolicy.class,
-            contextId, subjectSupplier);
+            contextId,
+            subjectSupplier
+        );
     }
 
     public AuthorizationService(
-            Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
-            Supplier<Subject> subjectSupplier) {
-        this(factoryClass, policyClass, contextId, subjectSupplier, null);
-    }
-
-    public AuthorizationService(
-            Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
-            Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
-
+            Class<?> factoryClass, Class<? extends Policy> policyClass,
+            String contextId, Supplier<Subject> subjectSupplier) {
         this(
-            installFactory(factoryClass), installPolicy(policyClass), contextId,
-            subjectSupplier, principalMapper);
+                factoryClass,
+                policyClass,
+                contextId,
+                subjectSupplier,
+                null
+        );
+    }
+
+    public AuthorizationService(Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId, Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
+        this(
+                installFactory(factoryClass),
+                installPolicy(policyClass),
+                contextId,
+                subjectSupplier,
+                principalMapper
+        );
     }
 
     public AuthorizationService(String contextId, Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
@@ -176,16 +190,16 @@ public class AuthorizationService {
         }
     }
 
-    public void setEnterpriseBeanSupplier(Supplier<Object> beanSupplier) {
-        try {
-            PolicyContext.registerHandler(
-                ENTERPRISE_BEAN,
-                new DefaultPolicyContextHandler(ENTERPRISE_BEAN, beanSupplier),
-                true);
-        } catch (PolicyContextException e) {
-            throw new IllegalStateException(e);
-        }
-    }
+//    public void setEnterpriseBeanSupplier(Supplier<Object> beanSupplier) {
+//        try {
+//            PolicyContext.registerHandler(
+//                ENTERPRISE_BEAN,
+//                new DefaultPolicyContextHandler(ENTERPRISE_BEAN, beanSupplier),
+//                true);
+//        } catch (PolicyContextException e) {
+//            throw new IllegalStateException(e);
+//        }
+//    }
 
     /**
      * @return the protectionDomainCreator
@@ -624,7 +638,9 @@ public class AuthorizationService {
     }
 
     public static String getServletContextId(ServletContext context) {
-        return context.getVirtualServerName() + " " + context.getContextPath();
+        String contextID = context.getVirtualServerName() + " " + context.getContextPath();
+        logger.fine(contextID);
+        return contextID;
     }
 
     public static void setThreadContextId(ServletContext context) {
@@ -656,23 +672,23 @@ public class AuthorizationService {
     }
 
     public static void doPrivileged(PrivilegedExceptionRunnable runnable) throws Exception {
-        if (isSecMgrOff) {
-            runnable.run();
-        }
+
+        if (isSecMgrOff) runnable.run();
 
         AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
             runnable.run();
             return null;
         });
+
     }
 
     @FunctionalInterface
-    private static interface PrivilegedExceptionRunnable {
+    private interface PrivilegedExceptionRunnable {
         void run() throws PrivilegedActionException;
     }
 
     @FunctionalInterface
-    public static interface ThrowableSupplier<T> {
+    public interface ThrowableSupplier<T> {
         T get() throws Throwable;
     }
 

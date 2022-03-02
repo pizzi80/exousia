@@ -94,7 +94,7 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
     public void requestInitialized(ServletRequestEvent event) {
         // Sets the initial request.
         // Note that we should actually have the request used before every filter and Servlet that will be executed.
-        localServletRequest.set((HttpServletRequest) event.getServletRequest());
+        localServletRequest.set((HttpServletRequest)event.getServletRequest());
 
         // Sets the context ID in the current thread. The context ID is a unique name for the current web application and
         // is used by Jakarta Authorization and Exousia.

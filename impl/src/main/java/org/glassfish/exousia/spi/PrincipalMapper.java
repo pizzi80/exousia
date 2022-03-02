@@ -18,6 +18,7 @@ package org.glassfish.exousia.spi;
 import static java.util.Arrays.asList;
 
 import java.security.Principal;
+import java.util.Collection;
 import java.util.List;
 
 import javax.security.auth.Subject;
@@ -29,9 +30,9 @@ import javax.security.auth.Subject;
  */
 public interface PrincipalMapper {
     
-    default List<String> getMappedRoles(Principal[] principals, Subject subject) {
-        return getMappedRoles(asList(principals), subject);
-    }
+//    default List<String> getMappedRoles(Collection<Principal> principals, Subject subject) {
+//        return getMappedRoles(principals,subject);
+//    }
     
     List<String> getMappedRoles(Iterable<Principal> principals, Subject subject);
     

@@ -26,16 +26,11 @@ import jakarta.security.jacc.PolicyContextException;
  *
  * @author Arjan Tijms
  */
-public abstract class DefaultPolicyConfigurationPermissions
-    extends
-    DefaultPolicyConfigurationBase {
+public abstract class DefaultPolicyConfigurationPermissions extends DefaultPolicyConfigurationBase {
 
-    private Permissions excludedPermissions =
-        new Permissions();
-    private Permissions uncheckedPermissions =
-        new Permissions();
-    private Map<String, Permissions> perRolePermissions =
-        new HashMap<>();
+    private Permissions excludedPermissions = new Permissions();
+    private Permissions uncheckedPermissions = new Permissions();
+    private Map<String,Permissions> perRolePermissions = new HashMap<>();
 
     public DefaultPolicyConfigurationPermissions(
         String contextID) {
@@ -43,68 +38,48 @@ public abstract class DefaultPolicyConfigurationPermissions
     }
 
     @Override
-    public void addToExcludedPolicy(
-        Permission permission)
-        throws PolicyContextException {
-        excludedPermissions
-            .add(permission);
+    public void addToExcludedPolicy(Permission permission) throws PolicyContextException {
+        excludedPermissions.add(permission);
     }
 
     @Override
-    public void addToUncheckedPolicy(
-        Permission permission)
-        throws PolicyContextException {
-        uncheckedPermissions
-            .add(permission);
+    public void addToUncheckedPolicy(Permission permission) throws PolicyContextException {
+        uncheckedPermissions.add(permission);
     }
 
     @Override
-    public void addToRole(
-        String roleName,
-        Permission permission)
-        throws PolicyContextException {
-        Permissions permissions = perRolePermissions
-            .get(roleName);
+    public void addToRole(String roleName, Permission permission) throws PolicyContextException {
+        Permissions permissions = perRolePermissions.get(roleName);
         if (permissions == null) {
             permissions = new Permissions();
-            perRolePermissions.put(
-                roleName, permissions);
+            perRolePermissions.put(roleName, permissions);
         }
 
         permissions.add(permission);
     }
 
     @Override
-    public void delete()
-        throws PolicyContextException {
+    public void delete() throws PolicyContextException {
         removeExcludedPolicy();
         removeUncheckedPolicy();
         perRolePermissions.clear();
     }
 
     @Override
-    public void removeExcludedPolicy()
-        throws PolicyContextException {
+    public void removeExcludedPolicy() throws PolicyContextException {
         excludedPermissions = new Permissions();
     }
 
     @Override
-    public void removeRole(
-        String roleName)
-        throws PolicyContextException {
-        if (perRolePermissions
-            .containsKey(roleName)) {
-            perRolePermissions
-                .remove(roleName);
-        } else if ("*"
-            .equals(roleName)) {
-            perRolePermissions.clear();
+    public void removeRole(String roleName) throws PolicyContextException {
+        if (perRolePermissions.containsKey(roleName)) {
+            perRolePermissions.remove(roleName);
         }
+        else if ("*".equals(roleName)) perRolePermissions.clear();
     }
 
     @Override
-    public void removeUncheckedPolicy()
-        throws PolicyContextException {
+    public void removeUncheckedPolicy() throws PolicyContextException {
         uncheckedPermissions = new Permissions();
     }
 

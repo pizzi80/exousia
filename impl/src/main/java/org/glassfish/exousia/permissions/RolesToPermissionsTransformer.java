@@ -225,8 +225,7 @@ public class RolesToPermissionsTransformer {
         }
     }
 
-    private static void addToRoleMap(Map<String, Permissions> roleMap, String role, Permission permission) {
-        roleMap.computeIfAbsent(role, e -> new Permissions())
-               .add(permission);
+    private static void addToRoleMap(Map<String,Permissions> roleMap, String role, Permission permission) {
+        roleMap.computeIfAbsent(role, e -> new Permissions()).add(permission);
     }
 }
