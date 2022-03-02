@@ -146,7 +146,7 @@ public class AuthorizationService {
         Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
         try {
             this.factory = factory;
-            this.policyConfiguration = factory.getPolicyConfiguration(contextId, false);
+            this.policyConfiguration = factory.getPolicyConfiguration(contextId, true);
             this.policy = Policy.getPolicy();
             this.contextId = contextId;
 

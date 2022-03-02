@@ -34,6 +34,8 @@ public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactor
     @Override
     public PolicyConfiguration getPolicyConfiguration( String contextID , boolean remove ) throws PolicyContextException {
 
+        if ( remove ) configurators.remove(contextID);
+
         DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine =
             configurators.computeIfAbsent(
                     contextID,
