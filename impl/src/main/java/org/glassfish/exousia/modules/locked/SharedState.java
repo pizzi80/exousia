@@ -39,11 +39,11 @@ public class SharedState {
     private static final Logger logger = Logger.getLogger(SharedState.class.getPackage().getName());
 
     // lock on the shared configTable and linkTable
-    private static ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
-    private static Lock rLock = rwLock.readLock();
-    private static Lock wLock = rwLock.writeLock();
-    private static Map<String, SimplePolicyConfiguration> configTable = new HashMap<>();
-    private static Map<String, Set<String>> linkTable = new HashMap<>();
+    private static final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
+    private static final Lock rLock = rwLock.readLock();
+    private static final Lock wLock = rwLock.writeLock();
+    private static final Map<String, SimplePolicyConfiguration> configTable = new HashMap<>();
+    private static final Map<String, Set<String>> linkTable = new HashMap<>();
     
 
     static Logger getLogger() {
