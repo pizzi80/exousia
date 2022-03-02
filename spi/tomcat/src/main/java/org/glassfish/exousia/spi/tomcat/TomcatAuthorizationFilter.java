@@ -40,6 +40,7 @@ import java.util.logging.Logger;
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
 import static org.apache.catalina.authenticator.Constants.REQ_JASPIC_SUBJECT_NOTE;
+import static org.glassfish.exousia.AuthorizationService.getServletContextId;
 import static org.glassfish.exousia.spi.tomcat.TomcatAuthorizationFilter.TomcatAuthorizationFilterName;
 
 /**
@@ -49,10 +50,9 @@ import static org.glassfish.exousia.spi.tomcat.TomcatAuthorizationFilter.TomcatA
  *
  * @author Arjan Tijms
  */
-
 @WebListener("TomcatAuthorizationListener")
 @WebFilter( filterName = TomcatAuthorizationFilterName , displayName = TomcatAuthorizationFilterName )
-public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequestListener {
+public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequestListener , ServletContextListener {
 
     private static final long serialVersionUID = -1070693477269008527L;
 
@@ -66,7 +66,7 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
     public void init() {
         ServletContext servletContext = getFilterConfig().getServletContext();
 
-        logger.info( "init "+servletContext+ " contextID: " +AuthorizationService.getServletContextId(servletContext) );
+        logger.info( "init "+servletContext+ " contextID: " + getServletContextId(servletContext) );
 
         AuthorizationService.setThreadContextId(servletContext);
 
@@ -97,6 +97,8 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
                 Map.of()
         );
 
+
+
     }
 
 
@@ -122,6 +124,19 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         localServletRequest.remove();
     }
 
+    // --- ServletContextListener ----------------------------------------------------------------------------
+
+    @Override
+    public void contextInitialized(ServletContextEvent event) {
+        // noop
+        logger.info( "contextInitialized "+event.getServletContext().getContextPath() );
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent event) {
+        logger.info( "contextDestroyed "+event.getServletContext().getContextPath() );
+        AuthorizationService.deletePolicy(getServletContextId(event.getServletContext()));
+    }
 
 
 

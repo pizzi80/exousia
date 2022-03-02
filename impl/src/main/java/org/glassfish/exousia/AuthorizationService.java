@@ -585,7 +585,7 @@ public class AuthorizationService {
 
     private static Policy installPolicy(Class<? extends Policy> policyClass) {
         try {
-            Policy.setPolicy(policyClass.getConstructor().newInstance());
+            Policy.setPolicy(policyClass.getDeclaredConstructor().newInstance());
 
             return getPolicy();
         } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
