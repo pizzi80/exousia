@@ -62,7 +62,9 @@ public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactor
 
     public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
 
-        logger.info( configurators.toString() );
+        String currentContextID = PolicyContext.getContextID(); // for debug
+
+        logger.info( currentContextID + " > "+ configurators);
 
         return (DefaultPolicyConfiguration) configurators.get(PolicyContext.getContextID()).getPolicyConfiguration();
 
