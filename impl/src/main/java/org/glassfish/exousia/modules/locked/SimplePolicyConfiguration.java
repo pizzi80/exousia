@@ -65,7 +65,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     public static final int DELETED_STATE = 3;
     
     private static final Permission setPolicyPermission = new SecurityPermission("setPolicy");
-    private String contextId;
+    private final String contextId;
     private int state = OPEN_STATE;
 
     // Excluded permissions
@@ -77,10 +77,10 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     // roleTbale mapps permissions and principals to roles.
     private List<Role> roleTable;
 
-    // Lock on this PolicyConfiguration onject
-    private ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
-    private Lock readLock = policyContextLock.readLock();
-    private Lock writeLock = policyContextLock.writeLock();
+    // Lock on this PolicyConfiguration object
+    private final ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
+    private final Lock readLock = policyContextLock.readLock();
+    private final Lock writeLock = policyContextLock.writeLock();
 
     static {
         // Register a role mapper
@@ -96,7 +96,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                     Thread.currentThread()
                           .getContextClassLoader()
                           .loadClass(className)
-                          .getConstructor(new Class[] { Logger.class });
+                          .getConstructor( Logger.class );
 
                 PolicyContext.registerHandler(AuthorizationRoleMapper.HANDLER_KEY, new PolicyContextHandler() {
 
@@ -104,7 +104,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                     public Object getContext(String key, Object data) throws PolicyContextException {
                         if (key.equals(AuthorizationRoleMapper.HANDLER_KEY)) {
                             try {
-                                return constructor.newInstance(new Object[] { SharedState.getLogger() });
+                                return constructor.newInstance(SharedState.getLogger());
                             } catch (Throwable t) {
                                 throw new PolicyContextException(t);
                             }
@@ -113,12 +113,12 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                     }
 
                     @Override
-                    public String[] getKeys() throws PolicyContextException {
+                    public String[] getKeys() {
                         return new String[] { AuthorizationRoleMapper.HANDLER_KEY };
                     }
 
                     @Override
-                    public boolean supports(String key) throws PolicyContextException {
+                    public boolean supports(String key) {
                         return key.equals(AuthorizationRoleMapper.HANDLER_KEY);
                     }
                 }, false);
@@ -147,15 +147,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      *
      * @return this object's policy context identifier.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the getContextID method signature. The exception thrown by the implementation class will be
-     * encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public String getContextID() throws PolicyContextException {
+    public String getContextID() {
         return contextId;
     }
 
@@ -172,18 +166,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * @param permissions the collection of permissions to be added to the role. The collection may be either a homogenous
      * or heterogenous collection.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the addToRole method signature. The exception thrown by the implementation class will be
-     * encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void addToRole(String roleName, PermissionCollection permissions) throws PolicyContextException {
+    public void addToRole(String roleName, PermissionCollection permissions) {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
@@ -208,18 +193,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * <P>
      * @param permission the permission to be added to the role.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the addToRole method signature. The exception thrown by the implementation class will be
-     * encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void addToRole(String roleName, Permission permission) throws PolicyContextException {
+    public void addToRole(String roleName, Permission permission) {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
@@ -239,27 +215,18 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * @param permissions the collection of permissions to be added as unchecked policy statements. The collection may be
      * either a homogeneous or heterogeneous collection.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the addToUncheckedPolicy method signature. The exception thrown by the implementation class
-     * will be encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void addToUncheckedPolicy(PermissionCollection permissions) throws PolicyContextException {
+    public void addToUncheckedPolicy(PermissionCollection permissions) {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
             if (permissions != null) {
-                for (Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
-                    getUncheckedPermissions().add((Permission) e.nextElement());
-                }
-
+                permissions.elements().asIterator().forEachRemaining(getUncheckedPermissions()::add);
+//                for ( Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
+//                    getUncheckedPermissions().add(e.nextElement());
+//                }
             }
         } finally {
             writeLock.unlock();
@@ -272,18 +239,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      *
      * @param permission the permission to be added to the unchecked policy statements.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the addToUncheckedPolicy method signature. The exception thrown by the implementation class
-     * will be encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void addToUncheckedPolicy(Permission permission) throws PolicyContextException {
+    public void addToUncheckedPolicy(Permission permission) {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
@@ -305,27 +263,18 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * @param permissions the collection of permissions to be added to the excluded policy statements. The collection may be
      * either a homogeneous or heterogeneous collection.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the addToExcludedPolicy method signature. The exception thrown by the implementation class will
-     * be encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void addToExcludedPolicy(PermissionCollection permissions) throws PolicyContextException {
+    public void addToExcludedPolicy(PermissionCollection permissions) {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
             if (permissions != null) {
-                for (Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
-                    this.getExcludedPermissions().add((Permission) e.nextElement());
-                }
-
+//                for (Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
+//                    this.getExcludedPermissions().add(e.nextElement());
+//                }
+                permissions.elements().asIterator().forEachRemaining( getExcludedPermissions()::add );
             }
         } finally {
             writeLock.unlock();
@@ -338,18 +287,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      *
      * @param permission the permission to be added to the excluded policy statements.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the addToExcludedPolicy method signature. The exception thrown by the implementation class will
-     * be encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void addToExcludedPolicy(Permission permission) throws PolicyContextException {
+    public void addToExcludedPolicy(Permission permission) {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
@@ -369,18 +309,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      *
      * @param roleName the name of the Role to remove from this PolicyConfiguration.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the removeRole method signature. The exception thrown by the implementation class will be
-     * encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void removeRole(String roleName) throws PolicyContextException {
+    public void removeRole(String roleName) {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
@@ -405,18 +336,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     /**
      * Used to remove any unchecked policy statements from this PolicyConfiguration.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the removeUncheckedPolicy method signature. The exception thrown by the implementation class
-     * will be encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void removeUncheckedPolicy() throws PolicyContextException {
+    public void removeUncheckedPolicy() {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
@@ -431,18 +353,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     /**
      * Used to remove any excluded policy statements from this PolicyConfiguration.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws UnsupportedOperationException if the state of the policy context whose interface is this
-     * PolicyConfiguration Object is "deleted" or "inService" when this method is called.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the removeExcludedPolicy method signature. The exception thrown by the implementation class
-     * will be encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void removeExcludedPolicy() throws PolicyContextException {
+    public void removeExcludedPolicy() {
         checkSetPolicyPermission();
         writeLock.lock();
         try {
@@ -509,15 +422,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * This operation has no affect on any linked PolicyConfigurations other than removing any links involving the deleted
      * PolicyConfiguration.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the delete method signature. The exception thrown by the implementation class will be
-     * encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public void delete() throws PolicyContextException {
+    public void delete() {
         checkSetPolicyPermission();
         SharedState.removeLinks(contextId);
 
@@ -591,15 +498,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      *
      * @return true if the state of the associated policy context is "inService"; false otherwise.
      *
-     * @throws SecurityException if called by an AccessControlContext that has not been granted the "setPolicy"
-     * SecurityPermission.
-     *
-     * @throws PolicyContextException if the implementation throws a checked exception that has not
-     * been accounted for by the inService method signature. The exception thrown by the implementation class will be
-     * encapsulated (during construction) in the thrown PolicyContextException.
      */
     @Override
-    public boolean inService() throws PolicyContextException {
+    public boolean inService() {
         readLock.lock();
         try {
             return stateIs(INSERVICE_STATE);
@@ -609,7 +510,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     }
 
     // Internal Policy Configuration interfaces start here
-    protected static SimplePolicyConfiguration getPolicyConfig(String pcid, boolean remove) throws PolicyContextException {
+    protected static SimplePolicyConfiguration getPolicyConfig(String pcid, boolean remove) {
         SimplePolicyConfiguration simplePolicyConfiguration = SharedState.getConfig(pcid, remove);
         
         simplePolicyConfiguration.writeLock.lock();
@@ -625,7 +526,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         return simplePolicyConfiguration;
     }
 
-    protected static boolean inService(String pcid) throws PolicyContextException {
+    protected static boolean inService(String pcid) {
         SimplePolicyConfiguration simplePolicyConfiguration = SharedState.lookupConfig(pcid);
         if (simplePolicyConfiguration == null) {
             return false;
@@ -663,18 +564,12 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     }
 
     private PermissionCollection getUncheckedPermissions() {
-        if (uncheckedPermissions == null) {
-            uncheckedPermissions = new Permissions();
-        }
-        
+        if (uncheckedPermissions == null) uncheckedPermissions = new Permissions();
         return uncheckedPermissions;
     }
 
     private PermissionCollection getExcludedPermissions() {
-        if (excludedPermissions == null) {
-            excludedPermissions = new Permissions();
-        }
-        
+        if (excludedPermissions == null) excludedPermissions = new Permissions();
         return excludedPermissions;
     }
 
@@ -818,15 +713,17 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                 /*
                  * this loop ensures that the tested perm does not imply an excluded perm; in which case it must be excluded
                  */
-                Enumeration<Permission> e = excludedPermissions.elements();
-                while (e.hasMoreElements()) {
-                    Permission excludedPerm = (Permission) e.nextElement();
-                    if (testedPermission.implies(excludedPerm)) {
-                        isExcluded = true;
-                        break;
-                    }
+//                Enumeration<Permission> e = excludedPermissions.elements();
+//                while (e.hasMoreElements()) {
+//                    Permission excludedPerm = e.nextElement();
+//                    if (testedPermission.implies(excludedPerm)) {
+//                        isExcluded = true;
+//                        break;
+//                    }
+//                }
 
-                }
+                isExcluded = excludedPermissions.elementsAsStream().anyMatch(testedPermission::implies);
+
             } else {
                 isExcluded = true;
             }
@@ -856,7 +753,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
 
             } else if (roleTable != null) {
 
-                Principal principals[] = protectionDomain.getPrincipals();
+                Principal[] principals = protectionDomain.getPrincipals();
 
                 if (principals.length == 0) {
                     doesImplies = 0;
@@ -889,7 +786,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     }
 
     private boolean hasExcludedPermissions() {
-        return excludedPermissions == null || !excludedPermissions.elements().hasMoreElements() ? false : true;
+        return excludedPermissions != null && excludedPermissions.elements().hasMoreElements();
     }
 
     private PermissionCollection getPermissions(PermissionCollection basePerms, PermissionCollection domainPerms, Principal[] principals)
@@ -981,9 +878,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         
         if (logger.isLoggable(level)) {
             if (System.getSecurityManager() == null) {
-                logger.log(level, msg, params);
+                logger.log(level,msg,params);
             } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                AccessController.doPrivileged(new PrivilegedAction<>() {
 
                     @Override
                     public Object run() {
@@ -1002,7 +899,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             if (System.getSecurityManager() == null) {
                 logger.log(level, msg, t);
             } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                AccessController.doPrivileged(new PrivilegedAction<>() {
 
                     @Override
                     public Object run() {

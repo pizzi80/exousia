@@ -15,13 +15,12 @@
  */
 package org.glassfish.exousia.modules.def;
 
-import static jakarta.security.jacc.PolicyContext.getContextID;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 
 /**
@@ -34,9 +33,6 @@ public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactor
 
     @Override
     public PolicyConfiguration getPolicyConfiguration( String contextID , boolean remove ) throws PolicyContextException {
-
-        // if contextID is null ??
-        if ( contextID == null ) return null;
 
         DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine =
             configurators.computeIfAbsent(
@@ -53,7 +49,7 @@ public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactor
     }
 
     @Override
-    public boolean inService(String contextID) throws PolicyContextException {
+    public boolean inService(String contextID) {
         DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.get(contextID);
 
         if (defaultPolicyConfigurationStateMachine == null) return false;
@@ -63,7 +59,7 @@ public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactor
 
     public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
 
-        return (DefaultPolicyConfiguration) configurators.get(getContextID()).getPolicyConfiguration();
+        return (DefaultPolicyConfiguration) configurators.get(PolicyContext.getContextID()).getPolicyConfiguration();
     }
 
 }

@@ -32,6 +32,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
@@ -51,6 +52,8 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
 
     private static final long serialVersionUID = -1070693477269008527L;
 
+    static final Logger logger = Logger.getLogger(TomcatAuthorizationFilter.class.getName());
+
 //    public static final String TomcatAuthorizationFilterName = "TomcatAuthorizationFilter";
 
     public static ThreadLocal<HttpServletRequest> localServletRequest = new ThreadLocal<>();
@@ -58,6 +61,8 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
     @Override
     public void init() {
         ServletContext servletContext = getFilterConfig().getServletContext();
+
+        logger.info( "init "+servletContext+ " contextID: " +AuthorizationService.getServletContextId(servletContext) );
 
         AuthorizationService.setThreadContextId(servletContext);
 

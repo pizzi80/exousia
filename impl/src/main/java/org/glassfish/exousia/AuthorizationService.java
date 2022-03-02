@@ -69,10 +69,6 @@ public class AuthorizationService {
 
     static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
 
-    static {
-        System.setSecurityManager(null);
-    }
-
     private static final boolean isSecMgrOff = true;  //System.getSecurityManager() == null; // removed in java 17+
 
     public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
@@ -86,7 +82,7 @@ public class AuthorizationService {
 
     private final String contextId;
 
-    private Function<Set<Principal>, ProtectionDomain> protectionDomainCreator = e -> newProtectionDomain(e);
+    private Function<Set<Principal>,ProtectionDomain> protectionDomainCreator = e -> newProtectionDomain(e);
 
     /**
      * The authorization policy. This is the class that makes the actual decision for a permission
@@ -614,7 +610,7 @@ public class AuthorizationService {
                 emptyCodeSource,
                 null,
                 null,
-                principalSet == null ? null : (Principal[]) principalSet.toArray(new Principal[0]));
+                principalSet == null ? null : principalSet.toArray(new Principal[0]));
     }
 
     private String getConstrainedURI(HttpServletRequest request) {
@@ -639,7 +635,7 @@ public class AuthorizationService {
 
     public static String getServletContextId(ServletContext context) {
         String contextID = context.getVirtualServerName() + " " + context.getContextPath();
-        logger.fine(contextID);
+        logger.info(contextID);
         return contextID;
     }
 
