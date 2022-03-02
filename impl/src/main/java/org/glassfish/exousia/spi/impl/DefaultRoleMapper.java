@@ -46,19 +46,17 @@ public class DefaultRoleMapper implements PrincipalMapper {
         // Try to get a hold of the proprietary role mapper of each known
         // AS. Sad that this is needed :(
 
-        if ( isTomcat() ) {
-            oneToOneMapping = true;
-        }
-        // JakartaEE servers should be compliant by default...... o_O
-        else if (tryGlassFish(contextID,allDeclaredRoles)) {
-            return;
-        } else if (tryWebLogic(contextID,allDeclaredRoles)) {
-            return;
-        } else if (tryGeronimo(contextID,allDeclaredRoles)) {
-            return;
-        } else {
-            oneToOneMapping = true;
-        }
+        // Tomcat first :)
+        if ( isTomcat() ) oneToOneMapping = true;
+
+        // JakartaEE servers shouldn't be compliant by default?...... o_O
+        else if (tryGlassFish(contextID,allDeclaredRoles));
+        else if (tryWebLogic(contextID,allDeclaredRoles));
+        else if (tryGeronimo(contextID,allDeclaredRoles));
+
+        // default
+        else oneToOneMapping = true;
+
     }
 
 //    @Override
@@ -138,7 +136,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
             Class<?> SecurityRoleMapperFactoryClass = Class.forName("org.glassfish.deployment.common.SecurityRoleMapperFactory");
 
             Object factoryInstance = Class.forName("org.glassfish.internal.api.Globals")
-                                          .getMethod("get", SecurityRoleMapperFactoryClass.getClass())
+                                          .getMethod("get", SecurityRoleMapperFactoryClass ) // .getClass()
                                           .invoke(null, SecurityRoleMapperFactoryClass);
 
             Object securityRoleMapperInstance = SecurityRoleMapperFactoryClass.getMethod("getRoleMapper", String.class)
@@ -258,7 +256,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
             // Geronimo 3.0.1 contains a protection mechanism to ensure only a Geronimo policy provider is installed.
             // This protection can be beat by creating an instance of GeronimoPolicyConfigurationFactory once. This instance
             // will statically register itself with an internal Geronimo class
-            geronimoPolicyConfigurationFactoryInstance = Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfigurationFactory").newInstance();
+            geronimoPolicyConfigurationFactoryInstance = Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfigurationFactory").getDeclaredConstructor().newInstance();
             geronimoContextToRoleMapping = new ConcurrentHashMap<>();
         } catch (Exception e) {
             // ignore
@@ -275,23 +273,21 @@ public class DefaultRoleMapper implements PrincipalMapper {
             try {
                 Class<?> geronimoPolicyConfigurationClass = Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfiguration");
 
-                Object geronimoPolicyConfigurationProxy = Proxy.newProxyInstance(DefaultRoleMapper.class.getClassLoader(), new Class[] {geronimoPolicyConfigurationClass}, new InvocationHandler() {
-
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-
-                        // Take special action on the following method:
-
-                        // void setPrincipalRoleMapping(Map<Principal, Set<String>> principalRoleMap) throws PolicyContextException;
-                        if (method.getName().equals("setPrincipalRoleMapping")) {
-
-                            geronimoContextToRoleMapping.put(contextID, (Map<Principal, Set<String>>) args[0]);
-
-                        }
-                        return null;
-                    }
-                });
+                Object geronimoPolicyConfigurationProxy =
+                        Proxy.newProxyInstance(
+                                DefaultRoleMapper.class.getClassLoader(),
+                                new Class[] {geronimoPolicyConfigurationClass},
+                                new InvocationHandler() {
+                                    @Override @SuppressWarnings("unchecked")
+                                    public Object invoke(Object proxy, Method method, Object[] args) {
+                                        // Take special action on the following method:
+                                        // void setPrincipalRoleMapping(Map<Principal, Set<String>> principalRoleMap) throws PolicyContextException;
+                                        if (method.getName().equals("setPrincipalRoleMapping")) {
+                                            geronimoContextToRoleMapping.put(contextID, (Map<Principal,Set<String>>) args[0]);
+                                        }
+                                        return null;
+                                    }
+                                });
 
                 // Set the proxy on the GeronimoPolicyConfigurationFactory so it will call us back later with the role mapping via the following method:
 
@@ -319,7 +315,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                     // (for Geronimo we know that using the default role mapper it's always zero or one group)
                     for (String group : principalToGroups(entry.getKey())) {
                         if (!groupToRoles.containsKey(group)) {
-                            groupToRoles.put(group, new ArrayList<String>());
+                            groupToRoles.put(group, new ArrayList<>());
                         }
                         groupToRoles.get(group).addAll(entry.getValue());
 
