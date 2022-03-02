@@ -16,6 +16,8 @@
 package org.glassfish.exousia.spi.tomcat;
 
 import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.catalina.Context;
@@ -31,13 +33,14 @@ import javax.security.auth.Subject;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
-import static java.util.Collections.emptyMap;
 import static org.apache.catalina.authenticator.Constants.REQ_JASPIC_SUBJECT_NOTE;
+import static org.glassfish.exousia.spi.tomcat.TomcatAuthorizationFilter.TomcatAuthorizationFilterName;
 
 /**
  * Tomcat Authorization Filter and Request Listener
@@ -46,15 +49,16 @@ import static org.apache.catalina.authenticator.Constants.REQ_JASPIC_SUBJECT_NOT
  *
  * @author Arjan Tijms
  */
-//@WebFilter( filterName = TomcatAuthorizationFilterName , displayName = TomcatAuthorizationFilterName )
-//@WebListener
+
+@WebListener("TomcatAuthorizationListener")
+@WebFilter( filterName = TomcatAuthorizationFilterName , displayName = TomcatAuthorizationFilterName )
 public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequestListener {
 
     private static final long serialVersionUID = -1070693477269008527L;
 
-    static final Logger logger = Logger.getLogger(TomcatAuthorizationFilter.class.getName());
+    public static final String TomcatAuthorizationFilterName = "TomcatAuthorizationFilter";
 
-//    public static final String TomcatAuthorizationFilterName = "TomcatAuthorizationFilter";
+    static final Logger logger = Logger.getLogger(TomcatAuthorizationFilter.class.getName());
 
     public static ThreadLocal<HttpServletRequest> localServletRequest = new ThreadLocal<>();
 
@@ -87,7 +91,10 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         // repository as well. That way Jakarta Authorization can work with the same data as Tomcat
         // internally does.
         authorizationService.addConstraintsToPolicy(
-            convertTomcatConstraintsToExousia(constraints), declaredRoles, isDenyUncoveredHttpMethods, emptyMap()
+                convertTomcatConstraintsToExousia(constraints),
+                declaredRoles,
+                isDenyUncoveredHttpMethods,
+                Map.of()
         );
 
     }
@@ -97,6 +104,9 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
 
     @Override
     public void requestInitialized(ServletRequestEvent event) {
+
+        logger.info( "requestInitialized "+event.getServletContext().getContextPath() );
+
         // Sets the initial request.
         // Note that we should actually have the request used before every filter and Servlet that will be executed.
         localServletRequest.set((HttpServletRequest)event.getServletRequest());
@@ -108,6 +118,7 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
 
     @Override
     public void requestDestroyed(ServletRequestEvent event) {
+        logger.info( "requestDestroyed "+event.getServletContext().getContextPath() );
         localServletRequest.remove();
     }
 

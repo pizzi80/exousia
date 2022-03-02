@@ -15,18 +15,13 @@
  */
 package org.glassfish.exousia.spi.tomcat;
 
-import java.util.Set;
-
-import jakarta.servlet.ServletContainerInitializer;
-import jakarta.servlet.ServletContext;
-
 /**
 * This initializer installs a container specific integration between Exousia
 * and Tomcat.
 *
 * @author Arjan Tijms
 *
-*/
+
 public class TomcatIntegrationInitializer implements ServletContainerInitializer {
 
     @Override
@@ -35,4 +30,4 @@ public class TomcatIntegrationInitializer implements ServletContainerInitializer
         context.addListener(TomcatAuthorizationFilter.class);
     }
 
-}
+}*/
