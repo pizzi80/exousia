@@ -16,19 +16,6 @@
  */
 package org.glassfish.exousia.constraints.transformer;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static jakarta.servlet.annotation.ServletSecurity.EmptyRoleSemantic.DENY;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import org.glassfish.exousia.constraints.SecurityConstraint;
-import org.glassfish.exousia.constraints.WebResourceCollection;
-
 import jakarta.servlet.HttpMethodConstraintElement;
 import jakarta.servlet.ServletSecurityElement;
 import jakarta.servlet.annotation.HttpConstraint;
@@ -36,6 +23,15 @@ import jakarta.servlet.annotation.HttpMethodConstraint;
 import jakarta.servlet.annotation.ServletSecurity;
 import jakarta.servlet.annotation.ServletSecurity.EmptyRoleSemantic;
 import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
+import org.glassfish.exousia.constraints.SecurityConstraint;
+import org.glassfish.exousia.constraints.WebResourceCollection;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static jakarta.servlet.annotation.ServletSecurity.EmptyRoleSemantic.DENY;
 
 /**
  *
@@ -45,7 +41,7 @@ public class ElementsToConstraintsTransformer {
 
     public static List<SecurityConstraint> createConstraints(Set<String> urlPatterns, ServletSecurityElement servletSecurityElement) {
         if (urlPatterns.isEmpty()) {
-            return emptyList();
+            return List.of();
         }
 
         List<SecurityConstraint> constraints = new ArrayList<>();
@@ -60,7 +56,7 @@ public class ElementsToConstraintsTransformer {
                 httpMethodConstraint.getEmptyRoleSemantic(),
                 httpMethodConstraint.getTransportGuarantee(),
                 httpMethodConstraint.getMethodName(),
-                emptySet()));
+                Set.of()));
 
             // Methods handled by the httpMethodConstraint are not handled by special "all methods" constraint
             httpMethodOmissions.add(httpMethodConstraint.getMethodName());
@@ -82,7 +78,7 @@ public class ElementsToConstraintsTransformer {
 
     public static List<SecurityConstraint> createConstraints(Set<String> urlPatterns, ServletSecurity servletSecurity) {
         if (urlPatterns.isEmpty()) {
-            return emptyList();
+            return List.of();
         }
 
         List<SecurityConstraint> constraints = new ArrayList<>();
@@ -97,7 +93,7 @@ public class ElementsToConstraintsTransformer {
                 httpMethodConstraint.emptyRoleSemantic(),
                 httpMethodConstraint.transportGuarantee(),
                 httpMethodConstraint.value(),
-                emptySet()));
+                Set.of()));
 
             // Methods handled by the httpMethodConstraint are not handled by special "all methods" constraint
             httpMethodOmissions.add(httpMethodConstraint.value());
@@ -135,12 +131,11 @@ public class ElementsToConstraintsTransformer {
     }
 
     private static SecurityConstraint createSecurityConstraint(Set<String> urlPatterns, String[] rolesAllowed, EmptyRoleSemantic emptyRoleSemantic, TransportGuarantee transportGuarantee, String httpMethod, Set<String> httpMethodOmissions) {
-        return new SecurityConstraint(asList(
-            new WebResourceCollection(
-                urlPatterns, createHttpMethods(httpMethod), httpMethodOmissions)),
-            createRolesAllowed(
-                rolesAllowed, emptyRoleSemantic),
-            transportGuarantee);
+        return new SecurityConstraint(
+                List.of( new WebResourceCollection(urlPatterns,createHttpMethods(httpMethod),httpMethodOmissions) ),
+                createRolesAllowed(rolesAllowed,emptyRoleSemantic),
+                transportGuarantee
+        );
     }
 
     private static Set<String> createRolesAllowed(String[] rolesAllowed, EmptyRoleSemantic emptyRoleSemantic) {
@@ -149,12 +144,12 @@ public class ElementsToConstraintsTransformer {
                 throw new IllegalArgumentException("Cannot use DENY with non-empty rolesAllowed");
             }
 
-            return new HashSet<>(asList(rolesAllowed));
+            return Set.of(rolesAllowed);
         }
 
         if (emptyRoleSemantic == DENY) {
             // Empty role set means DENY
-            return emptySet();
+            return Set.of();
         }
 
         // Null means PERMIT
@@ -162,11 +157,7 @@ public class ElementsToConstraintsTransformer {
     }
 
     private static Set<String> createHttpMethods(String httpMethod) {
-        if (httpMethod == null) {
-            return emptySet();
-        }
-
-        return new HashSet<>(asList(httpMethod));
+        return httpMethod == null ? Set.of() : Set.of(httpMethod);
     }
 
 }

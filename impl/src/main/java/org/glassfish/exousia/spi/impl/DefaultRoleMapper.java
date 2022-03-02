@@ -18,7 +18,6 @@ package org.glassfish.exousia.spi.impl;
 import org.glassfish.exousia.spi.PrincipalMapper;
 
 import javax.security.auth.Subject;
-import java.lang.invoke.DelegatingMethodHandle$Holder;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -28,10 +27,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.list;
 
 /**
  *
@@ -159,7 +156,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                     List<String> groups = getGroups(principals, null);
                     for (String group : groups) {
                         if (!groupToRoles.containsKey(group)) {
-                            groupToRoles.put(group, new ArrayList<String>());
+                            groupToRoles.put(group, new ArrayList<>());
                         }
                         groupToRoles.get(group).add(role);
                     }
@@ -375,7 +372,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
         // --- WebSphere ?? -------------------------------------------------
         @SuppressWarnings("rawtypes")
         Set<Hashtable> tables = subject.getPrivateCredentials(Hashtable.class);
-        if (tables != null && !tables.isEmpty()) {
+        if ( !tables.isEmpty() ) {
             @SuppressWarnings("rawtypes")
             Hashtable table = tables.iterator().next();
 
@@ -390,7 +387,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
     public static List<String> principalToGroups(Principal principal) {
         List<String> groups = new ArrayList<>();
-        principalToGroups(principal, groups);
+        principalToGroups(principal,groups);
         return groups;
     }
 
@@ -467,12 +464,15 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
     // --- Java missing API -------------------------------------------------------------------------
 
+    /**
+     * Null safe Collections.addAll
+     */
     public static <T> void addArrayToList( List<T> list , T[] array ) {
         if ( array == null || array.length == 0 ) return;
-        for ( T elem : array ) list.add(elem);
+        Collections.addAll(list,array);
     }
 
-    public static <T,E> void addEnumerationToList(List<T> list , Enumeration<T> enumeration  ) {
+    public static <T> void addEnumerationToList(List<T> list , Enumeration<T> enumeration  ) {
         if ( enumeration != null ) enumeration.asIterator().forEachRemaining(list::add);
     }
 
