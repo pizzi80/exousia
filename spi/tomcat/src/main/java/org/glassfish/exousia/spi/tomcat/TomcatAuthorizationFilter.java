@@ -29,10 +29,7 @@ import org.glassfish.exousia.constraints.WebResourceCollection;
 
 import javax.security.auth.Subject;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Logger;
 
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
@@ -229,6 +226,11 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
      * @return the Subject if the caller authenticated via Jakarta Authentication (JASPIC), otherwise null
      */
     private static Subject getSubject(HttpServletRequest httpServletRequest) {
+        logger.fine( httpServletRequest.getClass()+ " "+httpServletRequest);
+
+        if ( httpServletRequest instanceof Request )
+            logger.fine(Objects.toString(((Request)httpServletRequest).getNote(REQ_JASPIC_SUBJECT_NOTE)) );
+
         return (Subject) getRequest(unwrapFully(httpServletRequest)).getNote(REQ_JASPIC_SUBJECT_NOTE);
     }
 
@@ -243,7 +245,6 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
     }
 
     private static Request getRequest(RequestFacade facade) {
-        if ( facade == null ) return null;                      // request is null??
         try {
             Field requestField = RequestFacade.class.getDeclaredField("request");
             requestField.setAccessible(true);
