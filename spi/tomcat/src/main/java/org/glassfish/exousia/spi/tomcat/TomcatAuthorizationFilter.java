@@ -16,7 +16,9 @@
 package org.glassfish.exousia.spi.tomcat;
 
 import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebListener;
+import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.catalina.Context;
 import org.apache.catalina.connector.Request;
@@ -36,6 +38,7 @@ import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.CONF
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
 import static org.apache.catalina.authenticator.Constants.REQ_JASPIC_SUBJECT_NOTE;
 import static org.glassfish.exousia.AuthorizationService.getServletContextId;
+import static org.glassfish.exousia.spi.tomcat.TomcatAuthorizationFilter.TomcatAuthorizationFilterName;
 
 /**
  * Tomcat Authorization Filter and Request Listener
@@ -44,56 +47,53 @@ import static org.glassfish.exousia.AuthorizationService.getServletContextId;
  *
  * @author Arjan Tijms
  */
-@WebListener("TomcatAuthorizationListener")
-//@WebFilter( filterName = TomcatAuthorizationFilterName , displayName = TomcatAuthorizationFilterName )
-public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements ServletRequestListener , ServletContextListener {
+@WebListener(TomcatAuthorizationFilterName)
+@WebFilter( filterName = TomcatAuthorizationFilterName , displayName = TomcatAuthorizationFilterName )
+public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequestListener , ServletContextListener {
 
-//    private static final long serialVersionUID = -1070693477269008527L;
+    private static final long serialVersionUID = -1070693477269008527L;
 
-//    public static final String TomcatAuthorizationFilterName = "TomcatAuthorizationFilter";
+    public static final String TomcatAuthorizationFilterName = "TomcatAuthorizationFilter";
 
     static final Logger logger = Logger.getLogger(TomcatAuthorizationFilter.class.getName());
 
     public static ThreadLocal<HttpServletRequest> localServletRequest = new ThreadLocal<>();
 
-//    @Override
-//    public void init() {
-//        ServletContext servletContext = getFilterConfig().getServletContext();
-//
-//        logger.info( "init "+servletContext+ " contextID: " + getServletContextId(servletContext) );
-//
-//        AuthorizationService.setThreadContextId(servletContext);
-//
-//        // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
-//        // It specifically tells Jakarta Authorization how to get the current request, and the current subject
-//        AuthorizationService authorizationService = new AuthorizationService(
-//            servletContext,
-//            () -> getSubject(localServletRequest.get())
-//        );
-//
-//        authorizationService.setRequestSupplier( () -> localServletRequest.get() );
-//
-//
-//        // Get all the security constraints from Tomcat
-//        StandardRoot root = (StandardRoot) servletContext.getAttribute("org.apache.catalina.resources");
-//        Context context = root.getContext();
-//        SecurityConstraint[] constraints = context.findConstraints();
-//        Set<String> declaredRoles = Set.of(context.findSecurityRoles());
-//        boolean isDenyUncoveredHttpMethods = root.getContext().getDenyUncoveredHttpMethods();
-//
-//        // Copy all the security constraints that Tomcat has collected to the Jakarta Authorization
-//        // repository as well. That way Jakarta Authorization can work with the same data as Tomcat
-//        // internally does.
-//        authorizationService.addConstraintsToPolicy(
-//                convertTomcatConstraintsToExousia(constraints),
-//                declaredRoles,
-//                isDenyUncoveredHttpMethods,
-//                Map.of()
-//        );
-//
-//
-//
-//    }
+    @Override
+    public void init() {
+        ServletContext servletContext = getFilterConfig().getServletContext();
+
+        logger.info( "init "+servletContext+ " contextID: " + getServletContextId(servletContext) );
+
+        AuthorizationService.setThreadContextId(servletContext);
+
+        // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
+        // It specifically tells Jakarta Authorization how to get the current request, and the current subject
+        AuthorizationService authorizationService = new AuthorizationService(
+            servletContext,
+            () -> getSubject(localServletRequest.get())
+        );
+
+        authorizationService.setRequestSupplier( () -> localServletRequest.get() );
+
+        // Get all the security constraints from Tomcat
+        StandardRoot root = (StandardRoot) servletContext.getAttribute("org.apache.catalina.resources");
+        Context context = root.getContext();
+        SecurityConstraint[] constraints = context.findConstraints();
+        Set<String> declaredRoles = Set.of(context.findSecurityRoles());
+        boolean isDenyUncoveredHttpMethods = root.getContext().getDenyUncoveredHttpMethods();
+
+        // Copy all the security constraints that Tomcat has collected to the Jakarta Authorization
+        // repository as well. That way Jakarta Authorization can work with the same data as Tomcat
+        // internally does.
+        authorizationService.addConstraintsToPolicy(
+                convertTomcatConstraintsToExousia(constraints),
+                declaredRoles,
+                isDenyUncoveredHttpMethods,
+                Map.of()
+        );
+
+    }
 
 
     // --- ServletRequestListener -----------------------------------------------------------------------
@@ -120,44 +120,44 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
 
     // --- ServletContextListener ----------------------------------------------------------------------------
 
-    @Override
-    public void contextInitialized(ServletContextEvent event) {
-        // noop
-        logger.info( "contextInitialized "+event.getServletContext().getContextPath() );
-
-        ServletContext servletContext = event.getServletContext();
-
-        logger.info( "init "+servletContext+ " contextID: " + getServletContextId(servletContext) );
-
-        AuthorizationService.setThreadContextId(servletContext);
-
-        // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
-        // It specifically tells Jakarta Authorization how to get the current request, and the current subject
-        AuthorizationService authorizationService = new AuthorizationService(
-                servletContext,
-                () -> getSubject(localServletRequest.get())
-        );
-
-        authorizationService.setRequestSupplier( () -> localServletRequest.get() );
-
-
-        // Get all the security constraints from Tomcat
-        StandardRoot root = (StandardRoot) servletContext.getAttribute("org.apache.catalina.resources");
-        Context context = root.getContext();
-        SecurityConstraint[] constraints = context.findConstraints();
-        Set<String> declaredRoles = Set.of(context.findSecurityRoles());
-        boolean isDenyUncoveredHttpMethods = root.getContext().getDenyUncoveredHttpMethods();
-
-        // Copy all the security constraints that Tomcat has collected to the Jakarta Authorization
-        // repository as well. That way Jakarta Authorization can work with the same data as Tomcat
-        // internally does.
-        authorizationService.addConstraintsToPolicy(
-                convertTomcatConstraintsToExousia(constraints),
-                declaredRoles,
-                isDenyUncoveredHttpMethods,
-                Map.of()
-        );
-    }
+//    @Override
+//    public void contextInitialized(ServletContextEvent event) {
+//        // noop
+//        logger.info( "contextInitialized "+event.getServletContext().getContextPath() );
+//
+//        ServletContext servletContext = event.getServletContext();
+//
+//        logger.info( "init "+servletContext+ " contextID: " + getServletContextId(servletContext) );
+//
+//        AuthorizationService.setThreadContextId(servletContext);
+//
+//        // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
+//        // It specifically tells Jakarta Authorization how to get the current request, and the current subject
+//        AuthorizationService authorizationService = new AuthorizationService(
+//                servletContext,
+//                () -> getSubject(localServletRequest.get())
+//        );
+//
+//        authorizationService.setRequestSupplier( () -> localServletRequest.get() );
+//
+//
+//        // Get all the security constraints from Tomcat
+//        StandardRoot root = (StandardRoot) servletContext.getAttribute("org.apache.catalina.resources");
+//        Context context = root.getContext();
+//        SecurityConstraint[] constraints = context.findConstraints();
+//        Set<String> declaredRoles = Set.of(context.findSecurityRoles());
+//        boolean isDenyUncoveredHttpMethods = root.getContext().getDenyUncoveredHttpMethods();
+//
+//        // Copy all the security constraints that Tomcat has collected to the Jakarta Authorization
+//        // repository as well. That way Jakarta Authorization can work with the same data as Tomcat
+//        // internally does.
+//        authorizationService.addConstraintsToPolicy(
+//                convertTomcatConstraintsToExousia(constraints),
+//                declaredRoles,
+//                isDenyUncoveredHttpMethods,
+//                Map.of()
+//        );
+//    }
 
     @Override
     public void contextDestroyed(ServletContextEvent event) {
