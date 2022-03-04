@@ -612,7 +612,7 @@ public class AuthorizationService {
 
     public static String getServletContextId(ServletContext context) {
         String contextID = context.getVirtualServerName() + " " + context.getContextPath();
-        logger.info(contextID);
+        logger.fine(contextID);
         return contextID;
     }
 

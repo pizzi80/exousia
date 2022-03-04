@@ -153,7 +153,7 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
 
         // Sets the context ID in the current thread. The context ID is a unique name for the current web application and
         // is used by Jakarta Authorization and Exousia.
-        AuthorizationService.setThreadContextId(event.getServletContext());
+//        AuthorizationService.setThreadContextId(event.getServletContext());
     }
 
     @Override
@@ -219,11 +219,12 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
      * @return the Subject if the caller authenticated via Jakarta Authentication (JASPIC), otherwise null
      */
     private static Subject getSubject(HttpServletRequest httpServletRequest) {
-        logger.fine(Objects.toString(httpServletRequest));
         if ( httpServletRequest != null ) {
-            if (httpServletRequest instanceof Request)
-                logger.fine(Objects.toString(((Request) httpServletRequest).getNote(REQ_JASPIC_SUBJECT_NOTE)));
-
+            if (httpServletRequest instanceof Request) {
+                logger.fine("Subject retrieved directly from Request");
+                return (Subject) ((Request)httpServletRequest).getNote(REQ_JASPIC_SUBJECT_NOTE);
+            }
+            logger.fine("Subject retrieved with unwrapFully and reflection");
             return (Subject) getRequest(unwrapFully(httpServletRequest)).getNote(REQ_JASPIC_SUBJECT_NOTE);
         }
         return null;
