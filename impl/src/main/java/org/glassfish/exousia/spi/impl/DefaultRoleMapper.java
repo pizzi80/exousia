@@ -46,7 +46,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
         // Try to get a hold of the proprietary role mapper of each known
         // AS. Sad that this is needed :(
 
-        // Tomcat first :)
+        // Tomcat first ;) ... it's servlet standard and requires no special works... Jetty?
         if ( isTomcat() ) oneToOneMapping = true;
 
         // JakartaEE servers shouldn't be compliant by default?...... o_O

@@ -16,21 +16,19 @@
 
 package org.glassfish.exousia;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.SEVERE;
-import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
-import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
+import jakarta.security.jacc.*;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import org.glassfish.exousia.constraints.SecurityConstraint;
+import org.glassfish.exousia.mapping.SecurityRoleRef;
+import org.glassfish.exousia.modules.def.DefaultPolicy;
+import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
+import org.glassfish.exousia.permissions.JakartaPermissions;
+import org.glassfish.exousia.spi.PrincipalMapper;
 
+import javax.security.auth.Subject;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.CodeSource;
-import java.security.Permission;
-import java.security.Permissions;
-import java.security.Policy;
-import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.security.ProtectionDomain;
+import java.security.*;
 import java.security.cert.Certificate;
 import java.util.List;
 import java.util.Map;
@@ -40,26 +38,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
-import javax.security.auth.Subject;
-
-import org.glassfish.exousia.constraints.SecurityConstraint;
-import org.glassfish.exousia.mapping.SecurityRoleRef;
-import org.glassfish.exousia.modules.def.DefaultPolicy;
-import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
-import org.glassfish.exousia.permissions.JakartaPermissions;
-import org.glassfish.exousia.spi.PrincipalMapper;
-
-import jakarta.security.jacc.EJBMethodPermission;
-import jakarta.security.jacc.EJBRoleRefPermission;
-import jakarta.security.jacc.PolicyConfiguration;
-import jakarta.security.jacc.PolicyConfigurationFactory;
-import jakarta.security.jacc.PolicyContext;
-import jakarta.security.jacc.PolicyContextException;
-import jakarta.security.jacc.WebResourcePermission;
-import jakarta.security.jacc.WebRoleRefPermission;
-import jakarta.security.jacc.WebUserDataPermission;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.SEVERE;
+import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
+import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
 
 /**
  *
@@ -150,12 +132,11 @@ public class AuthorizationService {
             this.policy = Policy.getPolicy();
             this.contextId = contextId;
 
-
             // Sets the context Id (aka application Id), which may be used by authorization modules to get the right
             // authorization config
             PolicyContext.setContextID(contextId);
 
-            PolicyContext.registerHandler(SUBJECT, new DefaultPolicyContextHandler(SUBJECT, subjectSupplier), true);
+            PolicyContext.registerHandler(SUBJECT, new DefaultPolicyContextHandler(SUBJECT, subjectSupplier ), true);
 
             PolicyContext.registerHandler(PRINCIPAL_MAPPER, new DefaultPolicyContextHandler(PRINCIPAL_MAPPER, () -> principalMapper), true);
 
@@ -166,22 +147,18 @@ public class AuthorizationService {
 
     public void setRequestSupplier(Supplier<HttpServletRequest> requestSupplier) {
         try {
-            PolicyContext.registerHandler(
-                HTTP_SERVLET_REQUEST,
-                new DefaultPolicyContextHandler(HTTP_SERVLET_REQUEST, requestSupplier),
-                true);
-        } catch (PolicyContextException e) {
+            PolicyContext.registerHandler(HTTP_SERVLET_REQUEST, new DefaultPolicyContextHandler(HTTP_SERVLET_REQUEST, requestSupplier), true);
+        }
+        catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
     }
 
     public void setSubjectSupplier(Supplier<Subject> subjectSupplier) {
         try {
-            PolicyContext.registerHandler(
-                SUBJECT,
-                new DefaultPolicyContextHandler(SUBJECT, subjectSupplier),
-                true);
-        } catch (PolicyContextException e) {
+            PolicyContext.registerHandler(SUBJECT, new DefaultPolicyContextHandler(SUBJECT, subjectSupplier), true);
+        }
+        catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -247,7 +224,7 @@ public class AuthorizationService {
             policyConfiguration.addToUncheckedPolicy(jakartaPermissions.getUnchecked());
 
             // Add the translated/generated per role resource permissions
-            for (Entry<String, Permissions> roleEntry : jakartaPermissions.getPerRole().entrySet()) {
+            for ( Entry<String,Permissions> roleEntry : jakartaPermissions.getPerRole().entrySet()) {
                 policyConfiguration.addToRole(roleEntry.getKey(), roleEntry.getValue());
             }
 
@@ -263,9 +240,9 @@ public class AuthorizationService {
             policyConfiguration.removeUncheckedPolicy();
             policyConfiguration.removeExcludedPolicy();
 
+            // Remove roles one by one from policy configurations which don't support
+            // the "*" role.
             if (declaredRoles != null) {
-                // Remove roles one by one for policy configurations which don't support
-                // the "*" role.
                 for (String role : declaredRoles) {
                     policyConfiguration.removeRole(role);
                 }

@@ -16,9 +16,7 @@
 package org.glassfish.exousia.spi.tomcat;
 
 import jakarta.servlet.*;
-import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebListener;
-import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.catalina.Context;
 import org.apache.catalina.connector.Request;
@@ -33,12 +31,12 @@ import javax.security.auth.Subject;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
 import static org.apache.catalina.authenticator.Constants.REQ_JASPIC_SUBJECT_NOTE;
 import static org.glassfish.exousia.AuthorizationService.getServletContextId;
-import static org.glassfish.exousia.spi.tomcat.TomcatAuthorizationFilter.TomcatAuthorizationFilterName;
 
 /**
  * Tomcat Authorization Filter and Request Listener
@@ -47,31 +45,30 @@ import static org.glassfish.exousia.spi.tomcat.TomcatAuthorizationFilter.TomcatA
  *
  * @author Arjan Tijms
  */
-@WebListener(TomcatAuthorizationFilterName)
-@WebFilter( filterName = TomcatAuthorizationFilterName , displayName = TomcatAuthorizationFilterName )
-public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequestListener , ServletContextListener {
-
-    private static final long serialVersionUID = -1070693477269008527L;
-
-    public static final String TomcatAuthorizationFilterName = "TomcatAuthorizationFilter";
+@WebListener
+//@WebFilter( filterName = TomcatAuthorizationFilterName , displayName = TomcatAuthorizationFilterName )
+public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements ServletContextListener , ServletRequestListener {
 
     static final Logger logger = Logger.getLogger(TomcatAuthorizationFilter.class.getName());
 
     public static ThreadLocal<HttpServletRequest> localServletRequest = new ThreadLocal<>();
 
-    @Override
-    public void init() {
-        ServletContext servletContext = getFilterConfig().getServletContext();
+    // --- ServletContextListener ----------------------------------------------------------------------------
 
-        logger.info( "init "+servletContext+ " contextID: " + getServletContextId(servletContext) );
+    @Override
+    public void contextInitialized(ServletContextEvent event) {
+
+        ServletContext servletContext = event.getServletContext();
+
+        logger.info( "init AppId: " + getServletContextId(servletContext) );
 
         AuthorizationService.setThreadContextId(servletContext);
 
         // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
         // It specifically tells Jakarta Authorization how to get the current request, and the current subject
         AuthorizationService authorizationService = new AuthorizationService(
-            servletContext,
-            () -> getSubject(localServletRequest.get())
+                servletContext,
+                () -> getSubject(localServletRequest.get())
         );
 
         authorizationService.setRequestSupplier( () -> localServletRequest.get() );
@@ -92,40 +89,23 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
                 isDenyUncoveredHttpMethods,
                 Map.of()
         );
-
-    }
-
-
-    // --- ServletRequestListener -----------------------------------------------------------------------
-
-    @Override
-    public void requestInitialized(ServletRequestEvent event) {
-
-        logger.info( "requestInitialized "+event.getServletContext().getContextPath() );
-
-        // Sets the initial request.
-        // Note that we should actually have the request used before every filter and Servlet that will be executed.
-        localServletRequest.set((HttpServletRequest)event.getServletRequest());
-
-        // Sets the context ID in the current thread. The context ID is a unique name for the current web application and
-        // is used by Jakarta Authorization and Exousia.
-        AuthorizationService.setThreadContextId(event.getServletContext());
     }
 
     @Override
-    public void requestDestroyed(ServletRequestEvent event) {
-        logger.info( "requestDestroyed "+event.getServletContext().getContextPath() );
-        localServletRequest.remove();
+    public void contextDestroyed(ServletContextEvent event) {
+        String appId = getServletContextId(event.getServletContext());
+        logger.info( "contextDestroyed "+appId );
+        AuthorizationService.deletePolicy(appId);   // if ( appId != null && appId.length() > 0 )
+        localServletRequest.remove();               // it's ok?
     }
 
-    // --- ServletContextListener ----------------------------------------------------------------------------
+    // --- Filter ----------------------------------------------------------------------------------------
 
+//    private static final long serialVersionUID = -1070693477269008527L;
+//    public static final String TomcatAuthorizationFilterName = "TomcatAuthorizationFilter";
 //    @Override
-//    public void contextInitialized(ServletContextEvent event) {
-//        // noop
-//        logger.info( "contextInitialized "+event.getServletContext().getContextPath() );
-//
-//        ServletContext servletContext = event.getServletContext();
+//    public void init() {
+//        ServletContext servletContext = getFilterConfig().getServletContext();
 //
 //        logger.info( "init "+servletContext+ " contextID: " + getServletContextId(servletContext) );
 //
@@ -134,12 +114,11 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
 //        // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
 //        // It specifically tells Jakarta Authorization how to get the current request, and the current subject
 //        AuthorizationService authorizationService = new AuthorizationService(
-//                servletContext,
-//                () -> getSubject(localServletRequest.get())
+//            servletContext,
+//            () -> getSubject(localServletRequest.get())
 //        );
 //
 //        authorizationService.setRequestSupplier( () -> localServletRequest.get() );
-//
 //
 //        // Get all the security constraints from Tomcat
 //        StandardRoot root = (StandardRoot) servletContext.getAttribute("org.apache.catalina.resources");
@@ -157,19 +136,34 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
 //                isDenyUncoveredHttpMethods,
 //                Map.of()
 //        );
+//
 //    }
 
-    @Override
-    public void contextDestroyed(ServletContextEvent event) {
-        logger.info( "contextDestroyed "+event.getServletContext().getContextPath() );
 
-        String appId = getServletContextId(event.getServletContext());
-        if ( appId != null && appId.length() > 0 ) AuthorizationService.deletePolicy(appId);
+    // --- ServletRequestListener -----------------------------------------------------------------------
+
+    @Override
+    public void requestInitialized(ServletRequestEvent event) {
+
+        //logger.info( "requestInitialized "+event.getServletContext().getContextPath() );
+
+        // Sets the initial request.
+        // Note that we should actually have the request used before every filter and Servlet that will be executed.
+        localServletRequest.set((HttpServletRequest)event.getServletRequest());
+
+        // Sets the context ID in the current thread. The context ID is a unique name for the current web application and
+        // is used by Jakarta Authorization and Exousia.
+        AuthorizationService.setThreadContextId(event.getServletContext());
+    }
+
+    @Override
+    public void requestDestroyed(ServletRequestEvent event) {
+        //logger.info( "requestDestroyed "+event.getServletContext().getContextPath() );
+        localServletRequest.remove();
     }
 
 
-
-    // --- Utility methods for Tomcat to Exousia constraint conversion ---------------------------------------------------------------------------
+    // --- Utility methods for Tomcat to Exousia constraint model conversion ---------------------------------------------------------------------------
 
     /**
      * Transforms the security constraints (web.xml, annotations, and programmatic) from the Tomcat types to Exousia types.
@@ -182,12 +176,12 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         for (SecurityConstraint tomcatConstraint : tomcatConstraints) {
 
             // Tomcat Security Constraint Collection => List<WebResourceCollection>
-            List<WebResourceCollection> exousiaWebResourceCollections = new ArrayList<>();
-            for (SecurityCollection tomcatSecurityCollection : tomcatConstraint.findCollections())
-                exousiaWebResourceCollections.add( toExousiaSecurityCollection(tomcatSecurityCollection) );
+            List<WebResourceCollection> webResourceCollections =  Arrays.stream(tomcatConstraint.findCollections())
+                                                                        .map(TomcatAuthorizationFilter::toWebResourceCollection)
+                                                                        .collect(Collectors.toList());
 
             // (TomcatConstraint,List<WebResourceCollection>) => Exousia SecurityConstraint
-            exousiaConstraints.add( toExousiaSecurityConstraint(tomcatConstraint,exousiaWebResourceCollections) );
+            exousiaConstraints.add( toExousiaSecurityConstraint(tomcatConstraint,webResourceCollections) );
         }
 
         return exousiaConstraints;
@@ -210,14 +204,13 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
     /**
      * Tomcat SecurityCollection -> Exousia WebResourceCollection
      */
-    public static WebResourceCollection toExousiaSecurityCollection(SecurityCollection tomcatSecurityCollection ) {
+    public static WebResourceCollection toWebResourceCollection(SecurityCollection tomcatSecurityCollection) {
         return new WebResourceCollection(
                 tomcatSecurityCollection.findPatterns(),
                 tomcatSecurityCollection.findMethods(),
                 tomcatSecurityCollection.findOmittedMethods()
         );
     }
-
 
     /**
      * Gets the authenticated Subject (if any) from the Tomcat specific location inside the HttpServletRequest instance.
@@ -226,12 +219,14 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
      * @return the Subject if the caller authenticated via Jakarta Authentication (JASPIC), otherwise null
      */
     private static Subject getSubject(HttpServletRequest httpServletRequest) {
-        logger.fine( httpServletRequest.getClass()+ " "+httpServletRequest);
+        logger.fine(Objects.toString(httpServletRequest));
+        if ( httpServletRequest != null ) {
+            if (httpServletRequest instanceof Request)
+                logger.fine(Objects.toString(((Request) httpServletRequest).getNote(REQ_JASPIC_SUBJECT_NOTE)));
 
-        if ( httpServletRequest instanceof Request )
-            logger.fine(Objects.toString(((Request)httpServletRequest).getNote(REQ_JASPIC_SUBJECT_NOTE)) );
-
-        return (Subject) getRequest(unwrapFully(httpServletRequest)).getNote(REQ_JASPIC_SUBJECT_NOTE);
+            return (Subject) getRequest(unwrapFully(httpServletRequest)).getNote(REQ_JASPIC_SUBJECT_NOTE);
+        }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -253,7 +248,6 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
             throw new IllegalStateException(e);
         }
-
     }
 
 }
