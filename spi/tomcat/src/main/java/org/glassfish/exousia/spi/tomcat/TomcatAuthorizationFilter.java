@@ -63,11 +63,6 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
 
         logger.info( "init AppId: " + getServletContextId(servletContext) );
 
-        // https://github.com/eclipse-ee4j/exousia/issues/16
-        // https://github.com/piranhacloud/piranha/blob/f841972fb1839b0239e2fa150b23e4a4fc6f6d15/extension/exousia/src/main/java/cloud/piranha/extension/exousia/AuthorizationPreInitializer.java
-        // No need for the previous policy (likely the Java SE "JavaPolicy") to be consulted.
-        Policy.setPolicy(null);
-
         AuthorizationService.setThreadContextId(servletContext);
 
         // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
@@ -102,6 +97,10 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
         String appId = getServletContextId(event.getServletContext());
         logger.info( "contextDestroyed "+appId );
         AuthorizationService.deletePolicy(appId);   // if ( appId != null && appId.length() > 0 )
+        // https://github.com/eclipse-ee4j/exousia/issues/16
+        // https://github.com/piranhacloud/piranha/blob/f841972fb1839b0239e2fa150b23e4a4fc6f6d15/extension/exousia/src/main/java/cloud/piranha/extension/exousia/AuthorizationPreInitializer.java
+        // No need for the previous policy (likely the Java SE "JavaPolicy") to be consulted.
+        Policy.setPolicy(null);
         localServletRequest.remove();               // it's ok?
     }
 
