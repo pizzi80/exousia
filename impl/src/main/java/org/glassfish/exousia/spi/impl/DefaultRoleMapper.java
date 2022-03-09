@@ -28,8 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import static java.util.Arrays.asList;
-
 /**
  *
  * @author Arjan Tijms
@@ -46,7 +44,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
         // Try to get a hold of the proprietary role mapper of each known
         // AS. Sad that this is needed :(
 
-        // Tomcat first ;) ... it's servlet standard and requires no special works... Jetty?
+        // Tomcat first ;) ... it's servlet standard and requires no special work... Jetty?
         if ( isTomcat() ) oneToOneMapping = true;
 
         // JakartaEE servers shouldn't be compliant by default?...... o_O
@@ -116,17 +114,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
     public static boolean isTomcat() { return IS_TOMCAT; }
 
-    private static final boolean IS_TOMCAT = checkIfIsTomcat();
-
-    private static boolean checkIfIsTomcat() {
-        try {
-            Class.forName("org.apache.tomcat.util.descriptor.web.SecurityConstraint");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
+    private static final boolean IS_TOMCAT = existsClass("org.apache.tomcat.util.descriptor.web.SecurityConstraint");
 
     // --- GlassFish ---------------------------------------------------------------------------------------------------------
 
@@ -204,29 +192,29 @@ public class DefaultRoleMapper implements PrincipalMapper {
             Object roleMapperInstance = roleMapperFactoryClass.getMethod("getRoleMapperForContextID", String.class)
                                                               .invoke(roleMapperFactoryInstance, contextID);
 
-            // This seems really awkward; the Map contains BOTH group names and user names, without ANY way to
+            // This seems really awkward; the Map contains BOTH group names and usernames, without ANY way to
             // distinguish between the two.
             // If a user now has a name that happens to be a role as well, we have an issue :X
             @SuppressWarnings("unchecked")
-            Map<String, String[]> roleToPrincipalNamesMap = (Map<String, String[]>) Class.forName("weblogic.security.jacc.simpleprovider.RoleMapperImpl")
-                                                                                         .getMethod("getRolesToPrincipalNames")
-                                                                                         .invoke(roleMapperInstance);
+            Map<String,String[]> roleToPrincipalNamesMap = (Map<String,String[]>) Class.forName("weblogic.security.jacc.simpleprovider.RoleMapperImpl")
+                                                                                       .getMethod("getRolesToPrincipalNames")
+                                                                                       .invoke(roleMapperInstance);
 
             for (String role : allDeclaredRoles) {
                 if (roleToPrincipalNamesMap.containsKey(role)) {
 
-                    List<String> groupsOrUserNames = asList(roleToPrincipalNamesMap.get(role));
+                    String[] groupsOrUserNames = roleToPrincipalNamesMap.get(role);
 
-                    for (String groupOrUserName : roleToPrincipalNamesMap.get(role)) {
-                        // Ignore the fact that the collection also contains user names and hope
-                        // that there are no user names in the application with the same name as a group
+                    for (String groupOrUserName : groupsOrUserNames) {
+                        // Ignore the fact that the collection also contains usernames and hope
+                        // that there are no usernames in the application with the same name as a group
                         if (!groupToRoles.containsKey(groupOrUserName)) {
-                            groupToRoles.put(groupOrUserName, new ArrayList<>());
+                            groupToRoles.put(groupOrUserName,new ArrayList<>());
                         }
                         groupToRoles.get(groupOrUserName).add(role);
                     }
 
-                    if ("**".equals(role) && !groupsOrUserNames.isEmpty()) {
+                    if ( "**".equals(role) && groupsOrUserNames.length > 0 ) {
                         // JACC spec 3.2 states: [...]
                         anyAuthenticatedUserRoleMapped = true;
                     }
@@ -340,7 +328,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
      * @param subject the fall back to use for finding groups, may be null
      * @return a list of (non-mapped) groups
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked","rawtypes"})
     public static List<String> getGroups(Iterable<Principal> principals, Subject subject) {
         final List<String> groups = new ArrayList<>();
 
@@ -366,15 +354,10 @@ public class DefaultRoleMapper implements PrincipalMapper {
         }
 
         // --- WebSphere ?? -------------------------------------------------
-        @SuppressWarnings("rawtypes")
         Set<Hashtable> tables = subject.getPrivateCredentials(Hashtable.class);
-        if ( !tables.isEmpty() ) {
-            @SuppressWarnings("rawtypes")
-            Hashtable table = tables.iterator().next();
-
-            List<String> wsGroups = (List<String>)table.get("com.ibm.wsspi.security.cred.groups");
-
-            return wsGroups != null ? wsGroups : List.of();
+        if ( ! tables.isEmpty() ) {
+//            Hashtable table = tables.iterator().next();
+            return (List<String>) tables.iterator().next().getOrDefault("com.ibm.wsspi.security.cred.groups",List.of());
         }
 
         // Not found --> Empty
@@ -393,15 +376,15 @@ public class DefaultRoleMapper implements PrincipalMapper {
     public static boolean principalToGroups(Principal principal, List<String> groups) {
         switch (principal.getClass().getName()) {
 
-            case "org.glassfish.security.common.Group": // GlassFish & Payara
+            case "org.glassfish.security.common.Group":                                 // GlassFish & Payara
             case "org.apache.geronimo.security.realm.providers.GeronimoGroupPrincipal": // Geronimo
-            case "weblogic.security.principal.WLSGroupImpl": // WebLogic
-            case "jeus.security.resource.GroupPrincipalImpl": // JEUS
+            case "weblogic.security.principal.WLSGroupImpl":                            // WebLogic
+            case "jeus.security.resource.GroupPrincipalImpl":                           // JEUS
                 groups.add(principal.getName());
                 break;
 
-            case "org.apache.openejb.core.security.AbstractSecurityService$Group": // TomEE 1
-            case "org.jboss.security.SimpleGroup": // JBoss EAP/WildFly
+            case "org.apache.openejb.core.security.AbstractSecurityService$Group":      // TomEE 1
+            case "org.jboss.security.SimpleGroup":                                      // JBoss EAP/WildFly
                 if (principal.getName().equals("Roles") && principal.getClass().getName().equals("org.jboss.security.SimpleGroup")) {
 
                     try {
@@ -441,10 +424,12 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
                 }
                 break;
-            case "org.apache.catalina.realm.GenericPrincipal": // Tomcat
+
+            case "org.apache.catalina.realm.GenericPrincipal":      // Tomcat
                 try {
 
-                    addArrayToList( groups ,
+                    addArrayToList(
+                            groups ,
                             (String[]) Class.forName("org.apache.catalina.realm.GenericPrincipal")
                                             .getMethod("getRoles")
                                             .invoke(principal)
@@ -458,14 +443,16 @@ public class DefaultRoleMapper implements PrincipalMapper {
         return false;
     }
 
-    // --- Java missing API -------------------------------------------------------------------------
+
+
+
+    // --- Utils -------------------------------------------------------------------------
 
     /**
      * Null safe Collections.addAll
      */
     public static <T> void addArrayToList( List<T> list , T[] array ) {
-        if ( array == null || array.length == 0 ) return;
-        Collections.addAll(list,array);
+        if (array != null && array.length != 0) Collections.addAll(list, array);
     }
 
     public static <T> void addEnumerationToList(List<T> list , Enumeration<T> enumeration  ) {
@@ -474,6 +461,15 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
     public static <T,E> void addEnumerationToList(List<T> list , Enumeration<E> enumeration , Function<E,T> extractValue ) {
         if ( enumeration != null ) enumeration.asIterator().forEachRemaining( elem -> list.add( extractValue.apply(elem) ) );
+    }
+
+    public static boolean existsClass( String className ) {
+        try {
+            Class.forName(className);
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
 }

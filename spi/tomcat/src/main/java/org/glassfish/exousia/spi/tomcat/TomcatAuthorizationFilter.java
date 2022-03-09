@@ -29,6 +29,7 @@ import org.glassfish.exousia.constraints.WebResourceCollection;
 
 import javax.security.auth.Subject;
 import java.lang.reflect.Field;
+import java.security.Policy;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -61,6 +62,11 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
         ServletContext servletContext = event.getServletContext();
 
         logger.info( "init AppId: " + getServletContextId(servletContext) );
+
+        // https://github.com/eclipse-ee4j/exousia/issues/16
+        // https://github.com/piranhacloud/piranha/blob/f841972fb1839b0239e2fa150b23e4a4fc6f6d15/extension/exousia/src/main/java/cloud/piranha/extension/exousia/AuthorizationPreInitializer.java
+        // No need for the previous policy (likely the Java SE "JavaPolicy") to be consulted.
+        Policy.setPolicy(null);
 
         AuthorizationService.setThreadContextId(servletContext);
 
