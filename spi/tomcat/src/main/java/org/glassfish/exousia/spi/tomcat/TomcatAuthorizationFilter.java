@@ -158,7 +158,7 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
 
         // Sets the context ID in the current thread. The context ID is a unique name for the current web application and
         // is used by Jakarta Authorization and Exousia.
-//        AuthorizationService.setThreadContextId(event.getServletContext());
+        AuthorizationService.setThreadContextId(event.getServletContext());
     }
 
     @Override
