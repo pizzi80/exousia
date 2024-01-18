@@ -185,12 +185,10 @@ public class DefaultRoleMapper implements PrincipalMapper {
             // RoleMapperFactory implementation class always seems to be the value of what is passed on the commandline
             // via the -Dweblogic.security.jacc.RoleMapperFactory.provider option.
             // See http://docs.oracle.com/cd/E57014_01/wls/SCPRG/server_prot.htm
-            Object roleMapperFactoryInstance = roleMapperFactoryClass.getMethod("getRoleMapperFactory")
-                                                                     .invoke(null);
+            Object roleMapperFactoryInstance = roleMapperFactoryClass.getMethod("getRoleMapperFactory").invoke(null);
 
             // See http://docs.oracle.com/cd/E21764_01/apirefs.1111/e13941/weblogic/security/jacc/RoleMapperFactory.html#getRoleMapperForContextID(java.lang.String)
-            Object roleMapperInstance = roleMapperFactoryClass.getMethod("getRoleMapperForContextID", String.class)
-                                                              .invoke(roleMapperFactoryInstance, contextID);
+            Object roleMapperInstance = roleMapperFactoryClass.getMethod("getRoleMapperForContextID", String.class).invoke(roleMapperFactoryInstance, contextID);
 
             // This seems really awkward; the Map contains BOTH group names and usernames, without ANY way to
             // distinguish between the two.
@@ -402,7 +400,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
 //                            groups.add(groupPrincipal.getName());
 //                        }
 
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
 
                     }
 
@@ -420,7 +418,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                                           .getMethod("getTomcatPrincipal")
                                           .invoke(principal)));
 
-                } catch (Exception e) {
+                } catch (Exception ignored) {
 
                 }
                 break;
@@ -435,7 +433,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                                             .invoke(principal)
                             );
 
-                } catch (Exception e) {
+                } catch (Exception ignored) {
 
                 }
         }

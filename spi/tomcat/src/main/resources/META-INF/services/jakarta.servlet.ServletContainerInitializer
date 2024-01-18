@@ -1,1 +1,2 @@
-#org.glassfish.exousia.spi.tomcat.TomcatIntegrationInitializer
+# Commentato perchè abbiamo annotato la classe con @WebListener
+# org.glassfish.exousia.spi.tomcat.TomcatIntegrationInitializer

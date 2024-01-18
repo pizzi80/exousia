@@ -195,7 +195,7 @@ public class DefaultPolicy extends Policy {
     private Policy getDefaultPolicy() {
         Policy policy = Policy.getPolicy();
         if (policy instanceof DefaultPolicy) {
-            logger.warning("Cannot obtain default / previous policy.");
+            logger.info("Cannot obtain default / previous policy.");
             return null;
         }
 
@@ -209,7 +209,7 @@ public class DefaultPolicy extends Policy {
 
         if (excludedPermissions.implies(permission)) return true;
 
-        return excludedPermissions.elementsAsStream().anyMatch( excludedPermission -> permission.implies(excludedPermission) );
+        return excludedPermissions.elementsAsStream().anyMatch(permission::implies);
 
 //        for (Permission excludedPermission : list(excludedPermissions.elements()) ) {
 //            if (permission.implies(excludedPermission)) {

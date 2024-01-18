@@ -65,6 +65,11 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
 
         AuthorizationService.setThreadContextId(servletContext);
 
+        // https://github.com/eclipse-ee4j/exousia/issues/16
+        // https://github.com/piranhacloud/piranha/blob/f841972fb1839b0239e2fa150b23e4a4fc6f6d15/extension/exousia/src/main/java/cloud/piranha/extension/exousia/AuthorizationPreInitializer.java
+        // No need for the previous policy (likely the Java SE "JavaPolicy") to be consulted.
+        Policy.setPolicy(null);
+
         // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
         // It specifically tells Jakarta Authorization how to get the current request, and the current subject
         AuthorizationService authorizationService = new AuthorizationService(
@@ -96,11 +101,15 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
     public void contextDestroyed(ServletContextEvent event) {
         String appId = getServletContextId(event.getServletContext());
         logger.info( "contextDestroyed "+appId );
+
         AuthorizationService.deletePolicy(appId);   // if ( appId != null && appId.length() > 0 )
+
         // https://github.com/eclipse-ee4j/exousia/issues/16
         // https://github.com/piranhacloud/piranha/blob/f841972fb1839b0239e2fa150b23e4a4fc6f6d15/extension/exousia/src/main/java/cloud/piranha/extension/exousia/AuthorizationPreInitializer.java
         // No need for the previous policy (likely the Java SE "JavaPolicy") to be consulted.
         Policy.setPolicy(null);
+
+        // teoricamente non serve perchè è già stato fatto su requestDestroyed
         localServletRequest.remove();               // it's ok?
     }
 
@@ -150,7 +159,7 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
     @Override
     public void requestInitialized(ServletRequestEvent event) {
 
-        //logger.info( "requestInitialized "+event.getServletContext().getContextPath() );
+        logger.info( "requestInitialized "+event.getServletContext().getContextPath() );
 
         // Sets the initial request.
         // Note that we should actually have the request used before every filter and Servlet that will be executed.
@@ -163,7 +172,7 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
 
     @Override
     public void requestDestroyed(ServletRequestEvent event) {
-        //logger.info( "requestDestroyed "+event.getServletContext().getContextPath() );
+        logger.info( "requestDestroyed "+event.getServletContext().getContextPath() );
         localServletRequest.remove();
     }
 
@@ -181,9 +190,10 @@ public class TomcatAuthorizationFilter /*extends HttpFilter*/ implements Servlet
         for (SecurityConstraint tomcatConstraint : tomcatConstraints) {
 
             // Tomcat Security Constraint Collection => List<WebResourceCollection>
-            List<WebResourceCollection> webResourceCollections =  Arrays.stream(tomcatConstraint.findCollections())
-                                                                        .map(TomcatAuthorizationFilter::toWebResourceCollection)
-                                                                        .collect(Collectors.toList());
+            SecurityCollection[] tomcatSecurityCollections = tomcatConstraint.findCollections();
+            List<WebResourceCollection> webResourceCollections = new ArrayList<>( tomcatSecurityCollections.length );
+            for (SecurityCollection securityCollection : tomcatSecurityCollections)
+                webResourceCollections.add(toWebResourceCollection(securityCollection));
 
             // (TomcatConstraint,List<WebResourceCollection>) => Exousia SecurityConstraint
             exousiaConstraints.add( toExousiaSecurityConstraint(tomcatConstraint,webResourceCollections) );

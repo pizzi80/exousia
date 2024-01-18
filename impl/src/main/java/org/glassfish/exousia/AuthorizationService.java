@@ -51,7 +51,7 @@ public class AuthorizationService {
 
     static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
 
-    private static final boolean isSecMgrOff = true;  //System.getSecurityManager() == null; // removed in java 17+
+    private static final boolean isSecMgrOff = true;  //System.getSecurityManager() == null; // removed in java 18+
 
     public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
     public static final String SUBJECT = "javax.security.auth.Subject.container";
@@ -64,7 +64,7 @@ public class AuthorizationService {
 
     private final String contextId;
 
-    private Function<Set<Principal>,ProtectionDomain> protectionDomainCreator = e -> newProtectionDomain(e);
+    private Function<Set<Principal>,ProtectionDomain> protectionDomainCreator = this::newProtectionDomain;
 
     /**
      * The authorization policy. This is the class that makes the actual decision for a permission
@@ -129,7 +129,7 @@ public class AuthorizationService {
         try {
             this.factory = factory;
             this.policyConfiguration = factory.getPolicyConfiguration(contextId, true);
-            this.policy = Policy.getPolicy();
+            this.policy = Policy.getPolicy(); // todo: is this correct?
             this.contextId = contextId;
 
             // Sets the context Id (aka application Id), which may be used by authorization modules to get the right
@@ -612,7 +612,7 @@ public class AuthorizationService {
 
     public static String getServletContextId(ServletContext context) {
         String contextID = context.getVirtualServerName() + " " + context.getContextPath();
-        logger.fine(contextID);
+        logger.info(contextID);
         return contextID;
     }
 

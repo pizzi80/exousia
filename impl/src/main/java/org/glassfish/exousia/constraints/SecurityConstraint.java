@@ -67,9 +67,7 @@ public class SecurityConstraint {
         return transportGuarantee;
     }
 
-    public Set<String> getRolesAllowed() {
-        return rolesAllowed;
-    }
+    public Set<String> getRolesAllowed() { return rolesAllowed; }
 
 
 
