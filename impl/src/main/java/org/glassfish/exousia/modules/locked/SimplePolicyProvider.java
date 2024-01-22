@@ -41,7 +41,7 @@ public class SimplePolicyProvider extends Policy {
      * element is either 0 (initial value or no reentrancy), or 1 (current thread is reentrant). When a thread exists the
      * implies method, byte[0] is alwasy reset to 0.
      */
-    private static ThreadLocal<Object> reentrancyStatus = new ThreadLocal<>() {
+    private static final ThreadLocal<Object> reentrancyStatus = new ThreadLocal<>() {
         @Override
         protected synchronized Object initialValue() {
             return new byte[] { 0 };
@@ -174,7 +174,7 @@ public class SimplePolicyProvider extends Policy {
             // will enable permission caching of container, unless REUSE
             // property is set, and its value is not "true".
             String propValue = System.getProperty(REUSE);
-            boolean supportsReuse = (propValue == null ? true : Boolean.valueOf(propValue));
+            boolean supportsReuse = (propValue == null || Boolean.parseBoolean(propValue));
             if (supportsReuse) {
                 if (PolicyContext.getHandlerKeys().contains(REUSE)) {
                     PolicyContext.getContext(REUSE);

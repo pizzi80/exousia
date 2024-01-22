@@ -29,9 +29,9 @@ public class DefaultPolicyContextHandler implements PolicyContextHandler {
     
     private final String key;
     private final String[] keys;
-    private final Supplier<? extends Object> contextObjectSupplier;
+    private final Supplier<?> contextObjectSupplier;
     
-    public DefaultPolicyContextHandler(String key, Supplier<? extends Object> contextObjectSupplier) {
+    public DefaultPolicyContextHandler(String key, Supplier<?> contextObjectSupplier) {
         this.key = key;
         this.keys = new String[] { key };
         this.contextObjectSupplier = contextObjectSupplier;

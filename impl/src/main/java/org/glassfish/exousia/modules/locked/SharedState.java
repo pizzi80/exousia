@@ -34,16 +34,16 @@ import jakarta.security.jacc.PolicyContextException;
  *
  * @author monzillo
  */
-public class SharedState {
+public enum SharedState { ;
     
     private static final Logger logger = Logger.getLogger(SharedState.class.getPackage().getName());
 
     // lock on the shared configTable and linkTable
-    private static ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
-    private static Lock rLock = rwLock.readLock();
-    private static Lock wLock = rwLock.writeLock();
-    private static Map<String, SimplePolicyConfiguration> configTable = new HashMap<>();
-    private static Map<String, Set<String>> linkTable = new HashMap<>();
+    private static final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
+    private static final Lock rLock = rwLock.readLock();
+    private static final Lock wLock = rwLock.writeLock();
+    private static final Map<String, SimplePolicyConfiguration> configTable = new HashMap<>();
+    private static final Map<String, Set<String>> linkTable = new HashMap<>();
     
 
     static Logger getLogger() {
@@ -79,12 +79,12 @@ public class SharedState {
     }
 
     static SimplePolicyConfiguration getActiveConfig() throws PolicyContextException {
-        String contectId = PolicyContext.getContextID();
+        String contextId = PolicyContext.getContextID();
         SimplePolicyConfiguration simplePolicyConfiguration = null;
-        if (contectId != null) {
+        if (contextId != null) {
             rLock.lock();
             try {
-                simplePolicyConfiguration = configTable.get(contectId);
+                simplePolicyConfiguration = configTable.get(contextId);
                 if (simplePolicyConfiguration == null) {
                     /*
                      * unknown policy context set on thread return null to allow checking to be performed with default context. Should

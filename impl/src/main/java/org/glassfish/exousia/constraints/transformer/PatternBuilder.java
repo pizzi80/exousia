@@ -61,7 +61,7 @@ public class PatternBuilder {
             irrelevantByQualifier = true;
         }
 
-        urlPatternSpec.append(":" + urlPattern);
+        urlPatternSpec.append(":").append(urlPattern);
     }
     
     ConstraintValue getOtherConstraint() {

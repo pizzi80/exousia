@@ -37,14 +37,14 @@ public class ConstraintValue {
 
     private static final Logger logger = Logger.getLogger(ConstraintValue.class.getName());
     
-    public static final String connectKeys[] = { "NONE", "INTEGRAL", "CONFIDENTIAL" };
+    public static final String[] connectKeys = { "NONE", "INTEGRAL", "CONFIDENTIAL" };
 
     public static final int connectTypeNone = 1;
     static Map<String, Integer> connectHash = new HashMap<>();
     static {
         for (int i = 0; i < connectKeys.length; i++)
-            connectHash.put(connectKeys[i], Integer.valueOf(1 << i));
-    };
+            connectHash.put(connectKeys[i], 1 << i);
+    }
 
     private boolean excluded;
     private boolean ignoreRoles;
@@ -63,9 +63,7 @@ public class ConstraintValue {
 
     void removeRole(String role) {
         synchronized (roles) {
-            if (roles.contains(role)) {
-                roles.remove(role);
-            }
+            roles.remove(role);
         }
     }
     
@@ -106,7 +104,7 @@ public class ConstraintValue {
                 throw new IllegalArgumentException("constraint translation error-illegal trx guarantee");
             }
 
-            b = bit.intValue();
+            b = bit;
         }
 
         connectSet |= b;
@@ -164,7 +162,7 @@ public class ConstraintValue {
                 }
             }
 
-            /**
+            /*
              * JACC MR8 When role '*' named, do not include any authenticated user role '**' unless an application defined a role
              * named '**'
              */
@@ -184,7 +182,7 @@ public class ConstraintValue {
         addConnectType(transportGuarantee);
 
         if (logger.isLoggable(FINE)) {
-            logger.log(FINE, "Jakarta Authorization: setOutcome yields: " + toString());
+            logger.log(FINE, "Jakarta Authorization: setOutcome yields: " + this);
         }
 
     }

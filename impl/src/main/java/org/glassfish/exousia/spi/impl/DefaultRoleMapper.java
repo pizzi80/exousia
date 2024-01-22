@@ -48,7 +48,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
     private static Object geronimoPolicyConfigurationFactoryInstance;
     private static ConcurrentMap<String, Map<Principal, Set<String>>> geronimoContextToRoleMapping;
 
-    private Map<String, List<String>> groupToRoles = new HashMap<>();
+    private final Map<String, List<String>> groupToRoles = new HashMap<>();
 
     private boolean oneToOneMapping;
     private boolean anyAuthenticatedUserRoleMapped = false;
@@ -62,7 +62,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
             // Geronimo 3.0.1 contains a protection mechanism to ensure only a Geronimo policy provider is installed.
             // This protection can be beat by creating an instance of GeronimoPolicyConfigurationFactory once. This instance
             // will statically register itself with an internal Geronimo class
-            geronimoPolicyConfigurationFactoryInstance = Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfigurationFactory").newInstance();
+            geronimoPolicyConfigurationFactoryInstance = Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfigurationFactory").getDeclaredConstructor().newInstance();
             geronimoContextToRoleMapping = new ConcurrentHashMap<>();
         } catch (Exception e) {
             // ignore
@@ -115,17 +115,15 @@ public class DefaultRoleMapper implements PrincipalMapper {
     public DefaultRoleMapper(String contextID, Collection<String> allDeclaredRoles) {
         // Initialize the groupToRoles map
 
+        // Tomcat first :)
+        if ( IS_TOMCAT ) oneToOneMapping = true;
+
         // Try to get a hold of the proprietary role mapper of each known
         // AS. Sad that this is needed :(
-        if (tryGlassFish(contextID, allDeclaredRoles)) {
-            return;
-        } else if (tryWebLogic(contextID, allDeclaredRoles)) {
-            return;
-        } else if (tryGeronimo(contextID, allDeclaredRoles)) {
-            return;
-        } else {
-            oneToOneMapping = true;
-        }
+        else if (isGlassFish(contextID, allDeclaredRoles));
+        else if (tryWebLogic(contextID, allDeclaredRoles));
+        else if (tryGeronimo(contextID, allDeclaredRoles));
+        else oneToOneMapping = true;
     }
 
     @Override
@@ -181,7 +179,20 @@ public class DefaultRoleMapper implements PrincipalMapper {
         return roles;
     }
 
-    private boolean tryGlassFish(String contextID, Collection<String> allDeclaredRoles) {
+    // --- APP SERVER IDENTIFICATION ------------------------------------------------------------------------------------------
+
+    private static final boolean IS_TOMCAT = isTomcat();
+
+    private static boolean isTomcat() {
+        try {
+            Class.forName("org.apache.tomcat.util.descriptor.web.SecurityConstraint");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    private boolean isGlassFish(String contextID, Collection<String> allDeclaredRoles) {
 
         try {
             Class<?> SecurityRoleMapperFactoryClass = Class.forName("org.glassfish.deployment.common.SecurityRoleMapperFactory");
@@ -205,7 +216,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                     List<String> groups = getGroups(principals, null);
                     for (String group : groups) {
                         if (!groupToRoles.containsKey(group)) {
-                            groupToRoles.put(group, new ArrayList<String>());
+                            groupToRoles.put(group, new ArrayList<>());
                         }
                         groupToRoles.get(group).add(role);
                     }
@@ -229,8 +240,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
             return true;
 
-        } catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
-                | InvocationTargetException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
             return false;
         }
     }
@@ -269,7 +279,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                         // Ignore the fact that the collection also contains user names and hope
                         // that there are no user names in the application with the same name as a group
                         if (!groupToRoles.containsKey(groupOrUserName)) {
-                            groupToRoles.put(groupOrUserName, new ArrayList<String>());
+                            groupToRoles.put(groupOrUserName, new ArrayList<>());
                         }
                         groupToRoles.get(groupOrUserName).add(role);
                     }
@@ -301,7 +311,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                     // (for Geronimo we know that using the default role mapper it's always zero or one group)
                     for (String group : principalToGroups(entry.getKey())) {
                         if (!groupToRoles.containsKey(group)) {
-                            groupToRoles.put(group, new ArrayList<String>());
+                            groupToRoles.put(group, new ArrayList<>());
                         }
                         groupToRoles.get(group).addAll(entry.getValue());
 
@@ -395,7 +405,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
                         for (Principal groupPrincipal : list(groupMembers)) {
                             groups.add(groupPrincipal.getName());
                         }
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
 
                     }
 
@@ -410,21 +420,24 @@ public class DefaultRoleMapper implements PrincipalMapper {
                                 .getMethod("getRoles")
                                 .invoke(
                                     Class.forName("org.apache.tomee.catalina.TomcatSecurityService$TomcatUser")
-                                              .getMethod("getTomcatPrincipal")
-                                              .invoke(principal))));
+                                         .getMethod("getTomcatPrincipal")
+                                         .invoke(principal))
+                                )
+                    );
 
-                } catch (Exception e) {
+                } catch (Exception ignored) {
 
                 }
                 break;
             case "org.apache.catalina.realm.GenericPrincipal": // Tomcat
                 try {
                     groups.addAll(
-                        asList((String[]) Class.forName("org.apache.catalina.realm.GenericPrincipal")
-                            .getMethod("getRoles")
-                            .invoke(principal)));
-
-                } catch (Exception e) {
+                        asList(
+                                (String[]) Class.forName("org.apache.catalina.realm.GenericPrincipal")
+                                                .getMethod("getRoles")
+                                                .invoke(principal))
+                        );
+                } catch (Exception ignored) {
 
                 }
         }

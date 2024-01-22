@@ -28,59 +28,41 @@ import jakarta.security.jacc.PolicyContextException;
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfigurationFactory
-    extends PolicyConfigurationFactory {
+public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactory {
 
-    private static final
-    ConcurrentMap<String, DefaultPolicyConfigurationStateMachine>
-        configurators = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, DefaultPolicyConfigurationStateMachine> configurators = new ConcurrentHashMap<>();
 
     @Override
-    public PolicyConfiguration getPolicyConfiguration(
-        String contextID,
-        boolean remove)
-        throws PolicyContextException {
+    public PolicyConfiguration getPolicyConfiguration(String contextID, boolean remove) throws PolicyContextException {
 
-        DefaultPolicyConfigurationStateMachine
-            defaultPolicyConfigurationStateMachine =
-            configurators.computeIfAbsent(contextID,
-                contextId -> new DefaultPolicyConfigurationStateMachine(
-                    new DefaultPolicyConfiguration(
-                        contextID)));
+        DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.computeIfAbsent(
+                contextID,
+                contextId -> new DefaultPolicyConfigurationStateMachine(new DefaultPolicyConfiguration(contextID))
+        );
 
         if (remove) {
-            defaultPolicyConfigurationStateMachine
-                .delete();
+            defaultPolicyConfigurationStateMachine.delete();
         }
 
-        defaultPolicyConfigurationStateMachine
-            .open();
+        defaultPolicyConfigurationStateMachine.open();
 
-        return
-            defaultPolicyConfigurationStateMachine;
+        return defaultPolicyConfigurationStateMachine;
     }
 
     @Override
-    public boolean inService(
-        String contextID)
-        throws PolicyContextException {
-        DefaultPolicyConfigurationStateMachine
-            defaultPolicyConfigurationStateMachine =
-            configurators.get(contextID);
+    public boolean inService(String contextID) throws PolicyContextException {
+        DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.get(contextID);
 
         if (defaultPolicyConfigurationStateMachine == null) {
             return false;
         }
 
-        return defaultPolicyConfigurationStateMachine
-            .inService();
+        return defaultPolicyConfigurationStateMachine.inService();
     }
 
     @Override
     public PolicyConfiguration getPolicyConfiguration(String contextID) {
-        return (DefaultPolicyConfiguration) configurators
-                .get(contextID)
-                .getPolicyConfiguration();
+        return configurators.get(contextID).getPolicyConfiguration();
     }
 
     @Override

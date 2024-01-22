@@ -22,13 +22,11 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
 import java.lang.reflect.Constructor;
-import java.security.AccessController;
 import java.security.CodeSource;
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.security.Permissions;
 import java.security.Principal;
-import java.security.PrivilegedAction;
 import java.security.ProtectionDomain;
 import java.security.SecurityPermission;
 import java.util.ArrayList;
@@ -67,7 +65,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     public static final int DELETED_STATE = 3;
     
     private static final Permission setPolicyPermission = new SecurityPermission("setPolicy");
-    private String contextId;
+    private final String contextId;
     private int state = OPEN_STATE;
 
     // Excluded permissions
@@ -80,9 +78,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     private List<Role> roleTable;
 
     // Lock on this PolicyConfiguration onject
-    private ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
-    private Lock readLock = policyContextLock.readLock();
-    private Lock writeLock = policyContextLock.writeLock();
+    private final ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
+    private final Lock readLock = policyContextLock.readLock();
+    private final Lock writeLock = policyContextLock.writeLock();
 
     static {
         // Register a role mapper
@@ -106,7 +104,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                     public Object getContext(String key, Object data) throws PolicyContextException {
                         if (key.equals(AuthorizationRoleMapper.HANDLER_KEY)) {
                             try {
-                                return constructor.newInstance(new Object[] { SharedState.getLogger() });
+                                return constructor.newInstance(SharedState.getLogger());
                             } catch (Throwable t) {
                                 throw new PolicyContextException(t);
                             }
@@ -259,7 +257,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             assertStateIsOpen();
             if (permissions != null) {
                 for (Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
-                    getUncheckedPermissions().add((Permission) e.nextElement());
+                    getUncheckedPermissions().add(e.nextElement());
                 }
 
             }
@@ -325,7 +323,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             assertStateIsOpen();
             if (permissions != null) {
                 for (Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
-                    this.getExcludedPermissions().add((Permission) e.nextElement());
+                    this.getExcludedPermissions().add(e.nextElement());
                 }
 
             }
@@ -666,11 +664,10 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     }
 
     protected static void checkSetPolicyPermission() {
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(setPolicyPermission);
-        }
-
+//        SecurityManager securityManager = System.getSecurityManager();
+//        if (securityManager != null) {
+//            securityManager.checkPermission(setPolicyPermission);
+//        }
     }
 
     private void setState(int stateValue) {
@@ -726,11 +723,11 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     private void commitRoleMapping() throws PolicyContextException {
         AuthorizationRoleMapper roleMapper = null;
         try {
-            /**
+            /*
              * NB: when running with a security manager, this method will call policy, to check if the policy module is authorized
              * to invoke the policy context handler.
              */
-            roleMapper = (AuthorizationRoleMapper) PolicyContext.getContext(AuthorizationRoleMapper.HANDLER_KEY);
+            roleMapper = PolicyContext.getContext(AuthorizationRoleMapper.HANDLER_KEY);
 
             if (roleMapper == null) {
                 throw new PolicyContextException("RoleMapper.lookup.null");
@@ -751,8 +748,8 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                     role.setPrincipals(roleMapper.getPrincipalsInRole(contextId, role.getName()));
                 }
                 
-                /**
-                 * JACC MR8 add handling for the any authenticated user role '**'
+                /*
+                 * JACC MR8 add handling for any authenticated user role '**'
                  */
                 Role anyAuthRole = new Role("**");
                 int index = roleTable.indexOf(anyAuthRole);
@@ -871,7 +868,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
 
             } else if (roleTable != null) {
 
-                Principal principals[] = protectionDomain.getPrincipals();
+                Principal[] principals = protectionDomain.getPrincipals();
 
                 if (principals.length == 0) {
                     doesImplies = 0;
@@ -904,7 +901,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     }
 
     private boolean hasExcludedPermissions() {
-        return excludedPermissions == null || !excludedPermissions.elements().hasMoreElements() ? false : true;
+        return excludedPermissions != null && excludedPermissions.elements().hasMoreElements();
     }
 
     private PermissionCollection getPermissions(PermissionCollection basePerms, PermissionCollection domainPerms, Principal[] principals)
@@ -995,18 +992,18 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         Logger logger = SharedState.getLogger();
         
         if (logger.isLoggable(level)) {
-            if (System.getSecurityManager() == null) {
+            //if (System.getSecurityManager() == null) {
                 logger.log(level, msg, params);
-            } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
-
-                    @Override
-                    public Object run() {
-                        logger.log(level, msg, params);
-                        return null;
-                    }
-                });
-            }
+//            } else {
+//                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+//
+//                    @Override
+//                    public Object run() {
+//                        logger.log(level, msg, params);
+//                        return null;
+//                    }
+//                });
+//            }
         }
     }
 
@@ -1014,18 +1011,18 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         Logger logger = SharedState.getLogger();
         
         if (logger.isLoggable(level)) {
-            if (System.getSecurityManager() == null) {
+//            if (System.getSecurityManager() == null) {
                 logger.log(level, msg, t);
-            } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
-
-                    @Override
-                    public Object run() {
-                        logger.log(level, msg, t);
-                        return null;
-                    }
-                });
-            }
+//            } else {
+//                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+//
+//                    @Override
+//                    public Object run() {
+//                        logger.log(level, msg, t);
+//                        return null;
+//                    }
+//                });
+//            }
         }
     }
 

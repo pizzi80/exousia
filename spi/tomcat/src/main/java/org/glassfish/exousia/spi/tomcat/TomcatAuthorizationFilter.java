@@ -22,9 +22,11 @@ import static java.util.Collections.emptyMap;
 import static org.apache.catalina.authenticator.Constants.REQ_JASPIC_SUBJECT_NOTE;
 
 import java.lang.reflect.Field;
+import java.security.Policy;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 
@@ -71,11 +73,14 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
 
         AuthorizationService.setThreadContextId(servletContext);
 
+        // https://github.com/eclipse-ee4j/exousia/issues/16
+        // https://github.com/piranhacloud/piranha/commit/f841972fb1839b0239e2fa150b23e4a4fc6f6d15
+        // No need for the previous policy (likely the Java SE "JavaPolicy") to be consulted.
+        Policy.setPolicy(null);
+
         // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
         // It specifically tells Jakarta Authorization how to get the current request, and the current subject
-        AuthorizationService authorizationService = new AuthorizationService(
-            servletContext,
-            () -> getSubject(localServletRequest.get()));
+        AuthorizationService authorizationService = new AuthorizationService(servletContext, () -> getSubject(localServletRequest.get()));
 
         authorizationService.setRequestSupplier(() -> localServletRequest.get());
 
@@ -83,20 +88,23 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         // repository as well. That way Jakarta Authorization can work with the same data as Tomcat
         // internally does.
         authorizationService.addConstraintsToPolicy(
-            convertTomcatConstraintsToExousia(constraints),
-            new HashSet<>(declaredRoles), isDenyUncoveredHttpMethods, emptyMap());
+                convertTomcatConstraintsToExousia(constraints),
+                new HashSet<>(declaredRoles),
+                isDenyUncoveredHttpMethods,
+                emptyMap()
+        );
 
     }
 
     @Override
-    public void requestInitialized(ServletRequestEvent sre) {
+    public void requestInitialized(ServletRequestEvent event) {
         // Sets the initial request.
         // Note that we should actually have the request used before every filter and Servlet that will be executed.
-        localServletRequest.set((HttpServletRequest) sre.getServletRequest());
+        localServletRequest.set((HttpServletRequest) event.getServletRequest());
 
         // Sets the context ID in the current thread. The context ID is a unique name for the current web application and
         // is used by Jakarta Authorization and Exousia.
-        AuthorizationService.setThreadContextId(sre.getServletContext());
+        AuthorizationService.setThreadContextId(event.getServletContext());
     }
 
     @Override
@@ -110,28 +118,35 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
      * @param tomcatConstraints
      * @return
      */
-    private List<org.glassfish.exousia.constraints.SecurityConstraint> convertTomcatConstraintsToExousia(org.apache.tomcat.util.descriptor.web.SecurityConstraint[] tomcatConstraints) {
+    private static List<org.glassfish.exousia.constraints.SecurityConstraint> convertTomcatConstraintsToExousia(org.apache.tomcat.util.descriptor.web.SecurityConstraint[] tomcatConstraints) {
         if (tomcatConstraints == null || tomcatConstraints.length == 0) {
             return null;
         }
 
-        List<org.glassfish.exousia.constraints.SecurityConstraint> exousiaConstraints = new ArrayList<>();
+        List<org.glassfish.exousia.constraints.SecurityConstraint> exousiaConstraints = new ArrayList<>(tomcatConstraints.length);
 
         for (SecurityConstraint tomcatConstraint : tomcatConstraints) {
 
-            List<WebResourceCollection> exousiaWebResourceCollections = new ArrayList<>();
-            for (SecurityCollection tomcatSecurityCollection : tomcatConstraint.findCollections()) {
-                exousiaWebResourceCollections.add(new WebResourceCollection(
-                        tomcatSecurityCollection.findPatterns(),
-                        tomcatSecurityCollection.findMethods(),
-                        tomcatSecurityCollection.findOmittedMethods()));
+            SecurityCollection[] tomcatConstraintCollections = tomcatConstraint.findCollections();
+            List<WebResourceCollection> exousiaWebResourceCollections = new ArrayList<>(tomcatConstraintCollections.length);
+            for (SecurityCollection tomcatSecurityCollection : tomcatConstraintCollections) {
+                exousiaWebResourceCollections.add(
+                        new WebResourceCollection(
+                                tomcatSecurityCollection.findPatterns(),
+                                tomcatSecurityCollection.findMethods(),
+                                tomcatSecurityCollection.findOmittedMethods()
+                        )
+                );
             }
 
-            exousiaConstraints.add(new org.glassfish.exousia.constraints.SecurityConstraint(
-                    exousiaWebResourceCollections,
-                    new HashSet<>(asList(tomcatConstraint.findAuthRoles())),
-                    "confidential".equalsIgnoreCase(tomcatConstraint.getUserConstraint())
-                    ? CONFIDENTIAL : NONE));
+            exousiaConstraints.add(
+                    new org.glassfish.exousia.constraints.SecurityConstraint(
+                            exousiaWebResourceCollections,
+                            Set.of(tomcatConstraint.findAuthRoles()),
+                            "confidential".equalsIgnoreCase(tomcatConstraint.getUserConstraint())
+                                    ? CONFIDENTIAL : NONE
+                    )
+            );
 
         }
 
@@ -164,10 +179,10 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
             requestField.setAccessible(true);
 
             return (Request) requestField.get(facade);
-        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+        }
+        catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
             throw new IllegalStateException(e);
         }
-
     }
 
 }

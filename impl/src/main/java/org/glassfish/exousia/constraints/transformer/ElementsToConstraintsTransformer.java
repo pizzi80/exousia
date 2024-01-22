@@ -39,7 +39,7 @@ import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
  * 
  * @author Arjan Tijms
  */
-public class ElementsToConstraintsTransformer {
+public enum ElementsToConstraintsTransformer { ;
 
     public static List<SecurityConstraint> createConstraints(Set<String> urlPatterns, ServletSecurityElement servletSecurityElement) {
         if (urlPatterns.isEmpty()) {
@@ -116,12 +116,11 @@ public class ElementsToConstraintsTransformer {
     }
 
     private static SecurityConstraint createSecurityConstraint(Set<String> urlPatterns, String[] rolesAllowed, EmptyRoleSemantic emptyRoleSemantic, TransportGuarantee transportGuarantee, String httpMethod, Set<String> httpMethodOmissions) {
-        return new SecurityConstraint(asList(
-            new WebResourceCollection(
-                urlPatterns, createHttpMethods(httpMethod), httpMethodOmissions)), 
-            createRolesAllowed(
-                rolesAllowed, emptyRoleSemantic), 
-            transportGuarantee);
+        return new SecurityConstraint(
+                List.of(new WebResourceCollection(urlPatterns, createHttpMethods(httpMethod), httpMethodOmissions)),
+                createRolesAllowed(rolesAllowed, emptyRoleSemantic),
+                transportGuarantee
+        );
     }
     
     private static Set<String> createRolesAllowed(String[] rolesAllowed, EmptyRoleSemantic emptyRoleSemantic) {
@@ -146,7 +145,7 @@ public class ElementsToConstraintsTransformer {
             return emptySet();
         }
         
-        return new HashSet<>(asList(httpMethod));
+        return Set.of(httpMethod);
     }
 
 }

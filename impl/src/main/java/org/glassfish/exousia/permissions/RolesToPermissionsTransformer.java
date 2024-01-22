@@ -41,7 +41,8 @@ import jakarta.security.jacc.WebRoleRefPermission;
  * @author Ron Monzillo
  * @author Arjan Tijms
  */
-public class RolesToPermissionsTransformer {
+public enum RolesToPermissionsTransformer { ;
+
     static final Logger logger = Logger.getLogger(ConstraintsToPermissionsTransformer.class.getName());
 
     public static final String ANY_AUTHENTICATED_CALLER_ROLE = "**";
@@ -229,4 +230,5 @@ public class RolesToPermissionsTransformer {
         roleMap.computeIfAbsent(role, e -> new Permissions())
                .add(permission);
     }
+
 }

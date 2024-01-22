@@ -33,7 +33,7 @@ public class JakartaPermissions {
     private final Permissions unchecked = new Permissions();
 
     // Permissions for resources that require a role
-    private final Map<String, Permissions> perRole = new HashMap<String, Permissions>();
+    private final Map<String, Permissions> perRole = new HashMap<>();
     
     public Permissions getExcluded() {
         return excluded;

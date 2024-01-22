@@ -43,13 +43,6 @@ import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
 
-import org.glassfish.exousia.constraints.SecurityConstraint;
-import org.glassfish.exousia.mapping.SecurityRoleRef;
-import org.glassfish.exousia.modules.def.DefaultPolicy;
-import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
-import org.glassfish.exousia.permissions.JakartaPermissions;
-import org.glassfish.exousia.spi.PrincipalMapper;
-
 import jakarta.security.jacc.EJBMethodPermission;
 import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.PolicyConfiguration;
@@ -62,6 +55,13 @@ import jakarta.security.jacc.WebUserDataPermission;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.glassfish.exousia.constraints.SecurityConstraint;
+import org.glassfish.exousia.mapping.SecurityRoleRef;
+import org.glassfish.exousia.modules.def.DefaultPolicy;
+import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
+import org.glassfish.exousia.permissions.JakartaPermissions;
+import org.glassfish.exousia.spi.PrincipalMapper;
+
 /**
  *
  * @author Arjan Tijms
@@ -70,7 +70,7 @@ public class AuthorizationService {
 
     static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
 
-    private static final boolean isSecMgrOff = System.getSecurityManager() == null;
+    private static final boolean isSecMgrOff = true;// System.getSecurityManager() == null;
 
     public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
     public static final String SUBJECT = "javax.security.auth.Subject.container";
@@ -153,10 +153,7 @@ public class AuthorizationService {
             // authorization config
             PolicyContext.setContextID(contextId);
 
-            PolicyContext.registerHandler(
-                SUBJECT,
-                new DefaultPolicyContextHandler(SUBJECT, subjectSupplier),
-                true);
+            PolicyContext.registerHandler(SUBJECT, new DefaultPolicyContextHandler(SUBJECT, subjectSupplier), true);
 
             PolicyContext.registerHandler(
                 PRINCIPAL_MAPPER,
@@ -173,7 +170,8 @@ public class AuthorizationService {
             PolicyContext.registerHandler(
                 HTTP_SERVLET_REQUEST,
                 new DefaultPolicyContextHandler(HTTP_SERVLET_REQUEST, requestSupplier),
-                true);
+                true
+            );
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
@@ -184,7 +182,8 @@ public class AuthorizationService {
             PolicyContext.registerHandler(
                 SUBJECT,
                 new DefaultPolicyContextHandler(SUBJECT, subjectSupplier),
-                true);
+                true
+            );
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
@@ -195,7 +194,8 @@ public class AuthorizationService {
             PolicyContext.registerHandler(
                 ENTERPRISE_BEAN,
                 new DefaultPolicyContextHandler(ENTERPRISE_BEAN, beanSupplier),
-                true);
+                true
+            );
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
@@ -617,7 +617,7 @@ public class AuthorizationService {
                 emptyCodeSource,
                 null,
                 null,
-                principalSet == null ? null : (Principal[]) principalSet.toArray(new Principal[0]));
+                principalSet == null ? null : principalSet.toArray(new Principal[principalSet.size()]));
     }
 
     private String getConstrainedURI(HttpServletRequest request) {
@@ -633,7 +633,7 @@ public class AuthorizationService {
             return "";
         }
 
-        return relativeURI.replaceAll(":", "%3A");
+        return relativeURI.replace(":", "%3A");
     }
 
     private String getRequestRelativeURI(HttpServletRequest request) {
@@ -641,7 +641,7 @@ public class AuthorizationService {
     }
 
     public static String getServletContextId(ServletContext context) {
-        return context.getVirtualServerName() + " " + context.getContextPath();
+        return context.getVirtualServerName() + " " + context.getContextPath(); // eg. "Catalina/localhost /app"
     }
 
     public static void setThreadContextId(ServletContext context) {
@@ -659,7 +659,7 @@ public class AuthorizationService {
     private static void setPolicyContextChecked(String newContextId, String oldContextId) {
         if (newContextId != null && (oldContextId == null || !oldContextId.equals(newContextId))) {
 
-            logger.fine(() -> "Authorization: Changing Policy Context ID: oldContextId = " + oldContextId + " newContextId = " + newContextId);
+            logger.info(() -> "Authorization: Changing Policy Context ID: oldContextId = " + oldContextId + " newContextId = " + newContextId);
 
             try {
                 doPrivileged(() -> PolicyContext.setContextID(newContextId));
@@ -684,12 +684,12 @@ public class AuthorizationService {
     }
 
     @FunctionalInterface
-    private static interface PrivilegedExceptionRunnable {
+    public interface PrivilegedExceptionRunnable {
         void run() throws PrivilegedActionException;
     }
 
     @FunctionalInterface
-    public static interface ThrowableSupplier<T> {
+    public interface ThrowableSupplier<T> {
         T get() throws Throwable;
     }
 

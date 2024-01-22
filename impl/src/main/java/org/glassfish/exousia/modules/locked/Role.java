@@ -21,6 +21,7 @@ import java.security.PermissionCollection;
 import java.security.Permissions;
 import java.security.Principal;
 import java.util.Enumeration;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -29,7 +30,7 @@ import java.util.Set;
  */
 public class Role {
 
-    private String roleName;
+    private final String roleName;
     private Permissions permissions;
     private Set<Principal> principals;
     private boolean isAnyAuthenticatedUserRole;
@@ -102,7 +103,7 @@ public class Role {
         return principals.contains(principal);
     }
 
-    boolean arePrincipalsInRole(Principal subject[]) {
+    boolean arePrincipalsInRole(Principal[] subject) {
         if (subject == null || subject.length == 0) {
             return false;
         }
@@ -128,20 +129,17 @@ public class Role {
     
     /**
      * NB: Class Overrides equals and hashCode Methods such that 2 Roles are equal simply based on having a common name.
-     *
-     * @param o
-     * @return
      */
     @Override
     public boolean equals(Object o) {
-        Role other = (o == null || !(o instanceof Role) ? null : (Role) o);
-        return (o == null ? false : getName().equals(other.getName()));
+        if (this == o) return true;
+        if (!(o instanceof Role role)) return false;
+        return Objects.equals(roleName, role.roleName);
     }
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 29 * hash + (this.roleName != null ? this.roleName.hashCode() : 0);
-        return hash;
+        return Objects.hash(roleName);
     }
+
 }

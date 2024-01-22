@@ -33,12 +33,12 @@ import jakarta.security.jacc.PolicyContextException;
 public class DefaultPolicyConfigurationStateMachine
     implements PolicyConfiguration {
 
-    public static enum State {
+    public enum State {
         OPEN, INSERVICE, DELETED
-    };
+    }
 
     private State state = OPEN;
-    private PolicyConfiguration policyConfiguration;
+    private final PolicyConfiguration policyConfiguration;
 
     public DefaultPolicyConfigurationStateMachine(
         PolicyConfiguration policyConfiguration) {

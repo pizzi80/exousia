@@ -46,7 +46,7 @@ import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
  * @author Ron Monzillo
  * @author Arjan Tijms (refactoring)
  */
-public class ConstraintsToPermissionsTransformer {
+public enum ConstraintsToPermissionsTransformer { ;
 
     static final Logger logger = Logger.getLogger(ConstraintsToPermissionsTransformer.class.getName());
     
@@ -57,9 +57,6 @@ public class ConstraintsToPermissionsTransformer {
     private static final int EXTENSION_MAPPING = 1;
     private static final int PREFIX_MAPPING = 2;
     private static final int EXACT_MAPPING = 3;
-
-    private ConstraintsToPermissionsTransformer() {
-    }
 
     public static JakartaPermissions createResourceAndDataPermissions(Set<String> declaredRoles, boolean isDenyUncoveredHttpMethods, List<SecurityConstraint> securityConstraints) {
         if (logger.isLoggable(FINE)) {
@@ -131,7 +128,7 @@ public class ConstraintsToPermissionsTransformer {
                 for (String urlPattern :  webResourceCollection.getUrlPatterns()) {
                     
                     // FIX TO BE CONFIRMED (will we ever?)
-                    urlPattern = urlPattern.replaceAll(":", "%3A");
+                    urlPattern = urlPattern.replace(":", "%3A");
     
                     if (logger.isLoggable(FINE)) {
                         logger.fine("Jakarta Authorization: constraint translation: process url pattern: " + urlPattern);
@@ -310,13 +307,13 @@ public class ConstraintsToPermissionsTransformer {
 
     private static void handlePerRole(Map<String, Permissions> map, PatternBuilder patternBuilder, String urlPatternSpec) {
         Map<String, BitSet> roleMap = patternBuilder.getRoleMap();
-        List<String> roleList = null;
+        List<String> roles = null;
 
         // Handle the roles for the omitted methods
         if (!patternBuilder.getOtherConstraint().isExcluded() && patternBuilder.getOtherConstraint().isAuthConstrained()) {
-            roleList = patternBuilder.getOtherConstraint().getRoles();
+            roles = patternBuilder.getOtherConstraint().getRoles();
 
-            for (String roleName : roleList) {
+            for (String roleName : roles) {
                 BitSet methods = patternBuilder.getMethodSet();
 
                 // Reduce omissions for explicit methods granted to role
@@ -340,7 +337,7 @@ public class ConstraintsToPermissionsTransformer {
         if (!methods.isEmpty()) {
             for (Entry<String, BitSet> roleEntry : roleMap.entrySet()) {
                 String roleName = roleEntry.getKey();
-                if (roleList == null || !roleList.contains(roleName)) {
+                if (roles == null || !roles.contains(roleName)) {
                     BitSet roleMethods = roleEntry.getValue();
                     if (!roleMethods.isEmpty()) {
                         addToRoleMap(map, roleName, new WebResourcePermission(urlPatternSpec, MethodValue.getActions(roleMethods)));

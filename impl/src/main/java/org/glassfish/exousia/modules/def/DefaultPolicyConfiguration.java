@@ -14,6 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
 package org.glassfish.exousia.modules.def;
+
 import static org.glassfish.exousia.AuthorizationService.PRINCIPAL_MAPPER;
 
 import org.glassfish.exousia.spi.PrincipalMapper;
@@ -26,29 +27,20 @@ import jakarta.security.jacc.PolicyContextException;
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfiguration
-    extends
-    DefaultPolicyConfigurationPermissions {
+public class DefaultPolicyConfiguration extends DefaultPolicyConfigurationPermissions {
 
-    public DefaultPolicyConfiguration(
-        String contextID) {
+    public DefaultPolicyConfiguration(String contextID) {
         super(contextID);
     }
 
     private PrincipalMapper roleMapper;
 
     @Override
-    public void commit()
-        throws PolicyContextException {
+    public void commit() throws PolicyContextException {
 
-        roleMapper = (PrincipalMapper) PolicyContext
-            .getContext(
-                PRINCIPAL_MAPPER);
+        roleMapper = PolicyContext.getContext(PRINCIPAL_MAPPER);
         if (roleMapper == null) {
-            roleMapper = new DefaultRoleMapper(
-                getContextID(),
-                getPerRolePermissions()
-                    .keySet());
+            roleMapper = new DefaultRoleMapper(getContextID(), getPerRolePermissions().keySet());
         }
     }
 

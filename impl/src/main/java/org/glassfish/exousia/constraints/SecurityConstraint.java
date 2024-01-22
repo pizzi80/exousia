@@ -16,12 +16,14 @@
 package org.glassfish.exousia.constraints;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +41,7 @@ public class SecurityConstraint {
     }
 
     public SecurityConstraint(WebResourceCollection webResourceCollection, String... rolesAllowed) {
-        this(asList(webResourceCollection), asList(rolesAllowed));
+        this(singletonList(webResourceCollection), asList(rolesAllowed));
     }
 
     public SecurityConstraint(List<WebResourceCollection> webResourceCollections, String... rolesAllowed) {
