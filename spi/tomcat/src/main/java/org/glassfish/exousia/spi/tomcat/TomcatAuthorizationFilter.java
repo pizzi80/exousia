@@ -49,9 +49,8 @@ import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- *
+ * Tomcat integration init
  * @author Arjan Tijms
- *
  */
 public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequestListener {
 
