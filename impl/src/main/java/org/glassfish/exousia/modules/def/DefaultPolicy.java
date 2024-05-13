@@ -16,7 +16,6 @@
 package org.glassfish.exousia.modules.def;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.list;
 
 import java.security.CodeSource;
 import java.security.Permission;
@@ -31,71 +30,56 @@ import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
 
-import org.glassfish.exousia.spi.PrincipalMapper;
-
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyConfigurationFactory;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 
+import org.glassfish.exousia.spi.PrincipalMapper;
+
 /**
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicy
-    extends Policy {
+public class DefaultPolicy extends Policy {
 
-    private final static Logger logger = Logger
-        .getLogger(DefaultPolicy.class
-            .getName());
+    private final static Logger logger = Logger.getLogger(DefaultPolicy.class.getName());
 
-    private Policy defaultPolicy = getDefaultPolicy();
+    private final Policy defaultPolicy = getDefaultPolicy();
 
     @Override
-    public boolean implies(
-        ProtectionDomain domain,
-        Permission permission) {
+    public boolean implies(ProtectionDomain domain, Permission permission) {
 
-        PolicyConfiguration policyConfiguration =
-                getPolicyConfigurationFactory().getPolicyConfiguration();
+        PolicyConfiguration policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
         
-        PrincipalMapper roleMapper = ((DefaultPolicyConfiguration) policyConfiguration)
-            .getRoleMapper();
+        PrincipalMapper roleMapper = ((DefaultPolicyConfiguration) policyConfiguration).getRoleMapper();
 
-        if (isExcluded(
-            policyConfiguration
-                .getExcludedPermissions(),
-            permission)) {
+        // fixme: if roleMappe is null what is the best return value? true or false?
+        if (roleMapper == null) {
+            return false;
+        }
+
+        if (isExcluded(policyConfiguration.getExcludedPermissions(), permission)) {
             // Excluded permissions cannot be accessed
             // by anyone
             return false;
         }
 
-        if (isUnchecked(
-            policyConfiguration
-                .getUncheckedPermissions(),
-            permission)) {
+        if (isUnchecked(policyConfiguration.getUncheckedPermissions(), permission)) {
             // Unchecked permissions are free to
             // be accessed by everyone
             return true;
         }
 
-        List<Principal> currentUserPrincipals = asList(
-            domain.getPrincipals());
+        List<Principal> currentUserPrincipals = asList(domain.getPrincipals());
 
-        if (!roleMapper
-            .isAnyAuthenticatedUserRoleMapped()
-            && !currentUserPrincipals
-                .isEmpty()) {
+        if (!roleMapper.isAnyAuthenticatedUserRoleMapped() && !currentUserPrincipals.isEmpty()) {
             // The "any authenticated user" role is not
             // mapped, so available to anyone and the current
             // user is assumed to be authenticated (we assume
             // that an unauthenticated user doesn't have any
             // principals whatever they are)
-            if (hasAccessViaRole(
-                policyConfiguration
-                    .getPerRolePermissions(),
-                "**", permission)) {
+            if (hasAccessViaRole(policyConfiguration.getPerRolePermissions(), "**", permission)) {
                 // Access is granted purely based
                 // on the user being authenticated
                 // (the actual roles, if any, the user
@@ -104,23 +88,9 @@ public class DefaultPolicy
             }
         }
 
-        Subject subject;
-        try {
-            subject = (Subject) PolicyContext
-                .getContext(
-                    "javax.security.auth.Subject.container");
-        } catch (PolicyContextException ex) {
-            throw new RuntimeException(
-                ex);
-        }
+        final Subject subject = getCurrentSubject();
 
-        if (hasAccessViaRoles(
-            policyConfiguration
-                .getPerRolePermissions(),
-            roleMapper.getMappedRoles(
-                currentUserPrincipals,
-                subject),
-            permission)) {
+        if (hasAccessViaRoles(policyConfiguration.getPerRolePermissions(), roleMapper.getMappedRoles(currentUserPrincipals, subject), permission)) {
             // Access is granted via role. Note that if
             // this returns false
             // it doesn't mean the permission is not
@@ -130,81 +100,46 @@ public class DefaultPolicy
         }
 
         if (defaultPolicy != null) {
-            return defaultPolicy
-                .implies(domain,
-                    permission);
+            return defaultPolicy.implies(domain, permission);
         }
 
         return false;
     }
 
     @Override
-    public PermissionCollection getPermissions(
-        ProtectionDomain domain) {
+    public PermissionCollection getPermissions(ProtectionDomain domain) {
 
         Permissions permissions = new Permissions();
 
-        PolicyConfiguration policyConfiguration =
-                getPolicyConfigurationFactory().getPolicyConfiguration();
-        PrincipalMapper roleMapper = getRoleMapper(policyConfiguration);
-        
-        PermissionCollection excludedPermissions = policyConfiguration
-            .getExcludedPermissions();
+        PolicyConfiguration policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
 
-        // First get all permissions from the previous (original)
-        // policy
+        PrincipalMapper roleMapper = getRoleMapper(policyConfiguration);
+
+        PermissionCollection excludedPermissions = policyConfiguration.getExcludedPermissions();
+
+        // First get all permissions from the previous (original) policy
         if (defaultPolicy != null) {
-            collectPermissions(
-                defaultPolicy
-                    .getPermissions(
-                        domain),
-                permissions,
-                excludedPermissions);
+            collectPermissions(defaultPolicy.getPermissions(domain), permissions, excludedPermissions);
         }
 
         // If there are any static permissions, add those next
-        if (domain
-            .getPermissions() != null) {
-            collectPermissions(
-                domain.getPermissions(),
-                permissions,
-                excludedPermissions);
+        if (domain.getPermissions() != null) {
+            collectPermissions(domain.getPermissions(), permissions, excludedPermissions);
         }
 
         // Thirdly, get all unchecked permissions
-        collectPermissions(
-            policyConfiguration
-                .getUncheckedPermissions(),
-            permissions,
-            excludedPermissions);
+        collectPermissions(policyConfiguration.getUncheckedPermissions(), permissions, excludedPermissions);
 
-        Subject subject;
-        try {
-            subject = (Subject) PolicyContext
-                .getContext(
-                    "javax.security.auth.Subject.container");
-        } catch (PolicyContextException ex) {
-            throw new RuntimeException(
-                ex);
-        }
+        final Subject subject = getCurrentSubject();
 
         // Finally get the permissions for each role
         // *that the current user has*
         //
-        Map<String, PermissionCollection> perRolePermissions =
-            policyConfiguration.getPerRolePermissions();
+        Map<String, PermissionCollection> perRolePermissions = policyConfiguration.getPerRolePermissions();
 
-        for (String role : roleMapper
-            .getMappedRoles(
-                domain.getPrincipals(),
-                subject)) {
-            if (perRolePermissions
-                .containsKey(role)) {
-                collectPermissions(
-                    perRolePermissions
-                        .get(role),
-                    permissions,
-                    excludedPermissions);
+        for (String role : roleMapper.getMappedRoles(domain.getPrincipals(), subject)) {
+            if (perRolePermissions.containsKey(role)) {
+                collectPermissions(perRolePermissions.get(role), permissions, excludedPermissions);
             }
         }
 
@@ -212,26 +147,18 @@ public class DefaultPolicy
     }
 
     @Override
-    public PermissionCollection getPermissions(
-        CodeSource codesource) {
+    public PermissionCollection getPermissions(CodeSource codesource) {
 
         Permissions permissions = new Permissions();
 
-        PolicyConfiguration policyConfiguration;
-            policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
+        PolicyConfiguration policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
         
-        PermissionCollection excludedPermissions = policyConfiguration
-            .getExcludedPermissions();
+        PermissionCollection excludedPermissions = policyConfiguration.getExcludedPermissions();
 
         // First get all permissions from the previous
         // (original) policy
         if (defaultPolicy != null) {
-            collectPermissions(
-                defaultPolicy
-                    .getPermissions(
-                        codesource),
-                permissions,
-                excludedPermissions);
+            collectPermissions(defaultPolicy.getPermissions(codesource), permissions, excludedPermissions);
         }
 
         // Secondly get the static permissions.
@@ -239,18 +166,14 @@ public class DefaultPolicy
         // possible here, without knowing the roles
         // of the current user we can't check the per
         // role permissions.
-        collectPermissions(
-            policyConfiguration
-                .getUncheckedPermissions(),
-            permissions,
-            excludedPermissions);
+        collectPermissions(policyConfiguration.getUncheckedPermissions(), permissions, excludedPermissions);
 
         return permissions;
     }
 
-    // ### Private methods
+    // --- Private methods ----------------------------------------------------------------------------------
     
-    private PolicyConfigurationFactory getPolicyConfigurationFactory() {
+    private static PolicyConfigurationFactory getPolicyConfigurationFactory() {
         try {
             return PolicyConfigurationFactory.getPolicyConfigurationFactory();
         } catch (ClassNotFoundException | PolicyContextException e) {
@@ -258,57 +181,33 @@ public class DefaultPolicy
         }
     }
 
-    private Policy getDefaultPolicy() {
-        Policy policy = Policy
-            .getPolicy();
+    private static Policy getDefaultPolicy() {
+        Policy policy = Policy.getPolicy();
         if (policy instanceof DefaultPolicy) {
-            logger.warning(
-                "Cannot obtain default / previous policy.");
+            logger.warning("Cannot obtain default / previous policy.");
             return null;
         }
 
         return policy;
     }
     
-    private PrincipalMapper getRoleMapper(PolicyConfiguration policyConfiguration) {
+    private static PrincipalMapper getRoleMapper(PolicyConfiguration policyConfiguration) {
         return ((DefaultPolicyConfiguration) policyConfiguration).getRoleMapper();
     }
 
-    private boolean isExcluded(
-        PermissionCollection excludedPermissions,
-        Permission permission) {
-        if (excludedPermissions
-            .implies(permission)) {
-            return true;
-        }
+    private static boolean isExcluded(PermissionCollection excludedPermissions, Permission permission) {
 
-        for (Permission excludedPermission : list(
-            excludedPermissions
-                .elements())) {
-            if (permission.implies(
-                excludedPermission)) {
-                return true;
-            }
-        }
-
-        return false;
+        return excludedPermissions.implies(permission) ||
+               excludedPermissions.elementsAsStream().anyMatch(permission::implies);
     }
 
-    private boolean isUnchecked(
-            PermissionCollection uncheckedPermissions,
-        Permission permission) {
-        return uncheckedPermissions
-            .implies(permission);
+    private static boolean isUnchecked(PermissionCollection uncheckedPermissions, Permission permission) {
+        return uncheckedPermissions.implies(permission);
     }
 
-    private boolean hasAccessViaRoles(
-        Map<String, PermissionCollection> perRolePermissions,
-        List<String> roles,
-        Permission permission) {
+    private static boolean hasAccessViaRoles(Map<String, PermissionCollection> perRolePermissions, List<String> roles, Permission permission) {
         for (String role : roles) {
-            if (hasAccessViaRole(
-                perRolePermissions,
-                role, permission)) {
+            if (hasAccessViaRole(perRolePermissions, role, permission)) {
                 return true;
             }
         }
@@ -316,44 +215,33 @@ public class DefaultPolicy
         return false;
     }
 
-    private boolean hasAccessViaRole(
-        Map<String, PermissionCollection> perRolePermissions,
-        String role,
-        Permission permission) {
-        return perRolePermissions
-            .containsKey(role)
-            && perRolePermissions
-                .get(role)
-                .implies(permission);
+    private static boolean hasAccessViaRole(Map<String, PermissionCollection> perRolePermissions, String role, Permission permission) {
+
+        PermissionCollection permissions = perRolePermissions.get(role);
+
+        return permission != null && permissions.implies(permission);
     }
 
     /**
      * Copies permissions from a source into a target
      * skipping any permission that's excluded.
-     *
-     * @param sourcePermissions
-     * @param targetPermissions
-     * @param excludedPermissions
      */
-    private void collectPermissions(
-        PermissionCollection sourcePermissions,
-        PermissionCollection targetPermissions,
-        PermissionCollection excludedPermissions) {
+    private static void collectPermissions(PermissionCollection sourcePermissions, PermissionCollection targetPermissions, PermissionCollection excludedPermissions) {
 
-        boolean hasExcludedPermissions = excludedPermissions
-            .elements()
-            .hasMoreElements();
+        boolean hasExcludedPermissions = excludedPermissions.elements().hasMoreElements();
 
-        for (Permission permission : list(
-            sourcePermissions
-                .elements())) {
-            if (!hasExcludedPermissions
-                || !isExcluded(
-                    excludedPermissions,
-                    permission)) {
-                targetPermissions
-                    .add(permission);
+        sourcePermissions.elementsAsStream().forEach( permission -> {
+            if (!hasExcludedPermissions || !isExcluded(excludedPermissions, permission)) {
+                targetPermissions.add(permission);
             }
+        });
+    }
+
+    public static Subject getCurrentSubject() {
+        try {
+            return PolicyContext.getContext("javax.security.auth.Subject.container");
+        } catch (PolicyContextException ex) {
+            throw new RuntimeException(ex);
         }
     }
 

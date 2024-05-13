@@ -29,15 +29,14 @@ import jakarta.security.jacc.PolicyContextException;
  */
 public class DefaultPolicyConfiguration extends DefaultPolicyConfigurationPermissions {
 
+    private PrincipalMapper roleMapper;
+
     public DefaultPolicyConfiguration(String contextID) {
         super(contextID);
     }
 
-    private PrincipalMapper roleMapper;
-
     @Override
     public void commit() throws PolicyContextException {
-
         roleMapper = PolicyContext.getContext(PRINCIPAL_MAPPER);
         if (roleMapper == null) {
             roleMapper = new DefaultRoleMapper(getContextID(), getPerRolePermissions().keySet());

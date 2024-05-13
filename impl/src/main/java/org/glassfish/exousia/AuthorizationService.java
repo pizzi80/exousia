@@ -97,18 +97,14 @@ public class AuthorizationService {
 
     private String constrainedUriRequestAttribute;
 
-    public AuthorizationService(
-            ServletContext servletContext,
-            Supplier<Subject> subjectSupplier) {
+    public AuthorizationService(ServletContext servletContext, Supplier<Subject> subjectSupplier) {
         this(
             DefaultPolicyConfigurationFactory.class,
             DefaultPolicy.class,
             getServletContextId(servletContext), subjectSupplier);
     }
 
-    public AuthorizationService(
-            String contextId,
-            Supplier<Subject> subjectSupplier) {
+    public AuthorizationService(String contextId, Supplier<Subject> subjectSupplier) {
         this(
             DefaultPolicyConfigurationFactory.class,
             DefaultPolicy.class,
@@ -130,14 +126,11 @@ public class AuthorizationService {
             subjectSupplier, principalMapper);
     }
 
-    public AuthorizationService(
-        String contextId,
-        Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
-
-    this(
-        getFactory(), getPolicy(), contextId,
-        subjectSupplier, principalMapper);
-}
+    public AuthorizationService(String contextId, Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
+        this(
+            getFactory(), getPolicy(), contextId,
+            subjectSupplier, principalMapper);
+    }
 
     public AuthorizationService(
         PolicyConfigurationFactory factory, Policy policy, String contextId,
@@ -437,11 +430,10 @@ public class AuthorizationService {
 
     public boolean checkWebResourcePermission(HttpServletRequest request) {
         try {
-            Subject subject = (Subject) PolicyContext.getContext(SUBJECT);
+            Subject subject = PolicyContext.getContext(SUBJECT);
 
-            return checkWebResourcePermission(
-                request,
-                subject == null? null : subject.getPrincipals());
+            return checkWebResourcePermission(request, subject == null ? null : subject.getPrincipals());
+
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
@@ -449,15 +441,13 @@ public class AuthorizationService {
 
     public boolean checkWebResourcePermission(HttpServletRequest request, Set<Principal> principals) {
         return checkPermission(
-            new WebResourcePermission(
-                getConstrainedURI(request),
-                request.getMethod()),
+                new WebResourcePermission(getConstrainedURI(request), request.getMethod()),
                 principals);
     }
 
     public boolean checkWebRoleRefPermission(String servletName, String role) {
         try {
-            Subject subject = (Subject) PolicyContext.getContext(SUBJECT);
+            Subject subject = PolicyContext.getContext(SUBJECT);
 
             return checkWebRoleRefPermission(
                 servletName,
